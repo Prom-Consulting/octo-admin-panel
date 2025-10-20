@@ -7,6 +7,7 @@ import Organization from "../models/Organization.ts";
 import type { Request, Response, NextFunction } from "express";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+import { envConfig } from "../../config/envConfig.ts";
 
 const ClientServiceRouter = express.Router();
 
@@ -115,7 +116,7 @@ ClientServiceRouter.post("/login", async (req: Request, res: Response) => {
 
     const token = jwt.sign(
       { id: client.id, phone: client.phone_number },
-      process.env.JWT_SECRET!,
+      envConfig.JWT_SECRET!,
       { expiresIn: "365d" }
     );
 

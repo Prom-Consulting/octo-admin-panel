@@ -110,7 +110,7 @@ OrganizationStaff.init(
     photo_url: { type: DataTypes.STRING(255), allowNull: true },
   },
   {
-    tableName: "users",
+    tableName: "staff",
     sequelize,
     timestamps: true,
     indexes: [

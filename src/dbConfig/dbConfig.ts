@@ -13,7 +13,6 @@ export const env = cleanEnv(process.env, {
   PG_MASTER_PASSWORD: str(),
   PG_MASTER_HOST: str({ default: "localhost" }),
   PG_MASTER_PORT: num({ default: 5432 }),
-  JWT_SECRET: str(),
 });
 
 export const sequelize = new Sequelize(

@@ -14,6 +14,7 @@ import BookingRoute from "./booking/booking.service.ts";
 import AssignmentsServiceRoute from "./routes/assignment.service.ts";
 import OrganizationStaffAuthorizationRouter from "./routes/organizationStaffAuthorization.ts";
 import OrganizationStaffRouter from "./routes/organizationStaff.service.ts";
+import AssignmentsBookingServiceRoute from "./booking/assignmentsBooking.service.ts";
 
 config();
 
@@ -44,6 +45,7 @@ app.use("/admin", authorizationService);
 
 // booking routes
 app.use("/booking", BookingRoute);
+app.use("/booking", AssignmentsBookingServiceRoute);
 
 setupSwagger(app);
 

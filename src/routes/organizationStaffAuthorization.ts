@@ -4,8 +4,9 @@ import OrganizationStaff from "../models/OrganizationStaff.ts";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { authenticateToken } from "../middleware/authStaffMiddleware.ts";
+import { envConfig } from "../../config/envConfig.ts";
 
-const JWT_SECRET = process.env.JWT_SECRET!;
+const JWT_SECRET = envConfig.JWT_SECRET!;
 const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET!;
 
 const OrganizationStaffAuthorizationRouter = Router();

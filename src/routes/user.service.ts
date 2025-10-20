@@ -6,6 +6,7 @@ import jwt from "jsonwebtoken";
 import type { UserToCreate } from "../types";
 import bcrypt from "bcrypt";
 import Organization from "../models/Organization.ts";
+import { envConfig } from "../../config/envConfig.ts";
 
 const UserServiceRoute = Router();
 
@@ -81,7 +82,7 @@ UserServiceRoute.post(
           role: user.role,
           organizationName: organization.name,
         },
-        env.JWT_SECRET!,
+        envConfig.JWT_SECRET!,
         { expiresIn: "24h" } // срок жизни токена
       );
 

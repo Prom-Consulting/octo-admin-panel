@@ -1,8 +1,9 @@
 import type { Response, Request, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import OrganizationStaff from "../models/OrganizationStaff.ts";
+import { envConfig } from "../../config/envConfig.ts";
 
-const JWT_SECRET = process.env.JWT_SECRET!;
+const JWT_SECRET = envConfig.JWT_SECRET!;
 
 // Расширяем интерфейс Request для добавления информации о пользователе
 declare global {
