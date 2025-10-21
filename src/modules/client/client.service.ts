@@ -1,13 +1,13 @@
 import express from "express";
-import ClientActivity from "../models/ClientActivity.ts";
+import ClientActivity from "./ClientActivity.ts";
 import { nanoid } from "nanoid";
-import Branch from "../models/Branch.ts";
-import Client from "../models/Client.ts";
-import Organization from "../models/Organization.ts";
+import Branch from "../organization/Branch.ts";
+import Client from "./Client.ts";
+import Organization from "../organization/Organization.ts";
 import type { Request, Response, NextFunction } from "express";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import { envConfig } from "../../config/envConfig.ts";
+import { envConfig } from "../../../config/envConfig.ts";
 
 const ClientServiceRouter = express.Router();
 

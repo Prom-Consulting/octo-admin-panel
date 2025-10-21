@@ -1,12 +1,11 @@
 import { Router } from "express";
 import type { NextFunction, Response, Request } from "express";
-import Organization from "../models/Organization.ts";
-import { authMiddleware } from "../middleware/auth.ts";
+import Organization from "../organization/Organization.ts";
+import { authMiddleware } from "../../middleware/auth.ts";
 import jwt from "jsonwebtoken";
-import { env } from "../dbConfig/dbConfig.ts";
 import axios, { AxiosError } from "axios";
-import Branch from "../models/Branch.ts";
-import { envConfig } from "../../config/envConfig.ts";
+import Branch from "../organization/Branch.ts";
+import { envConfig } from "../../../config/envConfig.ts";
 
 const BookingRoute = Router();
 

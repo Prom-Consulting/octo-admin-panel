@@ -3,12 +3,12 @@ import type { Request, Response, NextFunction } from "express";
 import { z } from "zod";
 import axios, { AxiosError } from "axios";
 import { Op } from "sequelize";
-import Assignment from "../models/Assignment";
-import { authMiddleware } from "../middleware/auth";
+import Assignment from "../assigments/Assignment.ts";
+import { authMiddleware } from "../../middleware/auth.ts";
 import { DateTime } from "luxon";
-import { envConfig } from "../../config/envConfig.ts";
-import idGeneration from "../utils /idGeneration.ts";
-import Organization from "../models/Organization.ts";
+import { envConfig } from "../../../config/envConfig.ts";
+import idGeneration from "../../utils /idGeneration.ts";
+import Organization from "../organization/Organization.ts";
 import jwt from "jsonwebtoken";
 
 const AssignmentsBookingServiceRoute = Router();

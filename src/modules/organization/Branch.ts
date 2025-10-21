@@ -1,5 +1,5 @@
 import { DataTypes, Model, type Optional } from "sequelize";
-import { sequelize } from "../dbConfig/dbConfig.ts";
+import { sequelize } from "../../dbConfig/dbConfig.ts";
 import Organization from "./Organization.ts";
 
 export interface BranchAttributes {

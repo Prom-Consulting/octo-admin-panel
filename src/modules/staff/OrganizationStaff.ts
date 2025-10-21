@@ -1,6 +1,6 @@
 import { DataTypes, Model, type Optional } from "sequelize";
-import { sequelize } from "../dbConfig/dbConfig.ts";
-import type { OrganizationInfo } from "../types";
+import { sequelize } from "../../dbConfig/dbConfig.ts";
+import type { OrganizationInfo } from "../../types";
 
 export interface BranchInfo {
   id: number;

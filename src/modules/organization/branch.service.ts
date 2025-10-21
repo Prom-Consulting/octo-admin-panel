@@ -1,7 +1,7 @@
 import express from "express";
-import Branch from "../models/Branch.ts";
+import Branch from "./Branch.ts";
 import type { WhereOptions } from "sequelize";
-import Organization from "../models/Organization.ts";
+import Organization from "./Organization.ts";
 
 const BranchServiceRoute = express.Router();
 

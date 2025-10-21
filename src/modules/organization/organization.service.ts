@@ -1,7 +1,7 @@
 import express from "express";
-import Organization from "../models/Organization.ts";
-import { createClientDatabase } from "../methods/octo_database.ts";
-import User from "../models/User.ts";
+import Organization from "./Organization.ts";
+import { createClientDatabase } from "../../methods/octo_database.ts";
+import User from "../user/User.ts";
 import type { WhereOptions } from "sequelize";
 
 interface OrganizationCreate {

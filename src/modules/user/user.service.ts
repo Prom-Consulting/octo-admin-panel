@@ -1,12 +1,11 @@
 import type { NextFunction, Request, Response } from "express";
 import { Router } from "express";
-import User from "../models/User.ts";
-import { env } from "../dbConfig/dbConfig.ts";
+import User from "./User.ts";
 import jwt from "jsonwebtoken";
-import type { UserToCreate } from "../types";
+import type { UserToCreate } from "../../types";
 import bcrypt from "bcrypt";
-import Organization from "../models/Organization.ts";
-import { envConfig } from "../../config/envConfig.ts";
+import Organization from "../organization/Organization.ts";
+import { envConfig } from "../../../config/envConfig.ts";
 
 const UserServiceRoute = Router();
 

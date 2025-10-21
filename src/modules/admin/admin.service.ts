@@ -1,9 +1,9 @@
 import { type NextFunction, type Request, type Response, Router } from "express";
 import bcrypt from "bcrypt";
-import AdminModel from "../models/AdminModel.ts";
-import User from "../models/User.ts";
-import type { UserToCreate } from "../types";
-import { generatePassword } from "../methods/methods.ts";
+import AdminModel from "./AdminModel.ts";
+import User from "../user/User.ts";
+import type { UserToCreate } from "../../types";
+import { generatePassword } from "../../methods/methods.ts";
 
 const AdminServiceRoute = Router();
 

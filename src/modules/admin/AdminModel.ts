@@ -1,5 +1,5 @@
 import { DataTypes, Model, type Optional } from "sequelize";
-import { sequelize } from "../dbConfig/dbConfig";
+import { sequelize } from "../../dbConfig/dbConfig.ts";
 
 export interface AdminModelAttributes {
   id: number;

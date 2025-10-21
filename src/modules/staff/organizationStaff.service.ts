@@ -1,19 +1,19 @@
 import { Router } from "express";
 import type { Response, Request, NextFunction } from "express";
-import OrganizationStaff from "../models/OrganizationStaff.ts";
-import { sequelize } from "../dbConfig/dbConfig.ts";
+import OrganizationStaff from "./OrganizationStaff.ts";
+import { sequelize } from "../../dbConfig/dbConfig.ts";
 import { Op } from "sequelize";
-import { ALLOWED_ROLES, type StaffRole } from "../constants/roles.ts";
+import { ALLOWED_ROLES, type StaffRole } from "../../constants/roles.ts";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import { validateBranches } from "../methods/methods.ts";
-import Branch from "../models/Branch.ts";
+import { validateBranches } from "../../methods/methods.ts";
+import Branch from "../organization/Branch.ts";
 import {
   authenticateToken,
   authorizeRoles,
   checkOrganizationAccess,
-} from "../middleware/authStaffMiddleware.ts";
-import { envConfig } from "../../config/envConfig.ts";
+} from "../../middleware/authStaffMiddleware.ts";
+import { envConfig } from "../../../config/envConfig.ts";
 
 const JWT_SECRET = envConfig.JWT_SECRET!;
 const SALT_ROUNDS = 10;

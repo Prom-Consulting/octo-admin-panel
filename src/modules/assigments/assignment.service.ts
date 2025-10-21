@@ -1,13 +1,18 @@
-import express, { type Response, type NextFunction } from "express";
-import Assignment from "../models/Assignment.ts";
-import transformPrices from "../utils /transformPrices.ts";
-import Organization from "../models/Organization.ts";
+import express, {type Request, type Response, type NextFunction } from "express";
+import Assignment, {
+  ASSIGNMENT_STATUSES,
+  type AssignmentAttributes,
+  type AssignmentStatus,
+} from "./Assignment.ts";
+import transformPrices from "../../utils /transformPrices.ts";
+import Organization from "../organization/Organization.ts";
 import { DateTime } from "luxon";
-import idGeneration from "../utils /idGeneration.ts";
+import idGeneration from "../../utils /idGeneration.ts";
 import z from "zod";
 import { Op } from "sequelize";
-import Client from "../models/Client.ts";
-import OrganizationStaff from "../models/OrganizationStaff.ts";
+import Client from "../client/Client.ts";
+import OrganizationStaff from "../staff/OrganizationStaff.ts";
+import WorkingDates from "../staff/WorkingDates.ts";
 
 const AssignmentsServiceRoute = express.Router();
 
@@ -46,7 +51,7 @@ const CreateAssignmentSchema = z.object({
   assignmentDate: z.string(),
   startTime: z.string(),
   notes: z.string().nullable().optional(),
-  source: z.enum(["web", "mobile", "admin", "booking"]),
+  source: z.enum(["calendar", "mobile", "admin", "booking"]),
   discount: z.number().min(0).max(100).default(0),
   service: z.object({
     id: z.number().int().positive(),
@@ -123,6 +128,17 @@ AssignmentsServiceRoute.post("/calendar", async (req: Request, res: Response, ne
     if (!employee) {
       return res.status(404).json({ error: "Employee not found" });
     }
+
+    // const workingDates = await WorkingDates.findOne({
+    //   where: {
+    //     branch_id: branchId,
+    //     staff_id: employee.id,
+    //   }
+    // });
+    //
+    // if(!workingDates || (workingDates && workingDates.is_day_off)) {
+    //   return res.status(400).send({ error: "The employee is not working on this date or has the day off." });
+    // }
 
     const totalPrice =
       transformPrices(service.price) +
@@ -223,7 +239,18 @@ AssignmentsServiceRoute.post("/calendar", async (req: Request, res: Response, ne
 AssignmentsServiceRoute.patch("/calendar/:id", async (req, res, next) => {
   try {
     const {
-      clientAssignment
+      additionalServices,
+      service,
+      startTime,
+      endTime,
+      employeeId,
+      status,
+      notes,
+      assignmentDate,
+      discount,
+      paid,
+      managerId,
+      paymentMethod,
     } = req.body;
 
     const { id } = req.params;
@@ -232,11 +259,67 @@ AssignmentsServiceRoute.patch("/calendar/:id", async (req, res, next) => {
       return res.status(404).send({error: "No Assignment found with this id"});
     }
 
-    if (!clientAssignment) {
-      res.status(404).send({error: "No data available to create assignment"});
+    const updates: Partial<AssignmentAttributes> = {};
+
+    if (status) {
+      if (!ASSIGNMENT_STATUSES.includes(status as AssignmentStatus)) {
+        return res.status(400).send({ error: "Invalid status value" });
+      }
+      updates.status = status;
     }
 
-    await assignment.update(clientAssignment);
+    if (notes) updates.notes = notes;
+
+    if (employeeId) {
+      const employee = await OrganizationStaff.scope("employees").findByPk(employeeId);
+      if (!employee) return res.status(404).send({ error: "Employee not found" });
+
+      updates.employee_id = employeeId;
+      updates.employee_snapshot = {
+        first_name: employee.firstname,
+        last_name: employee.lastname || null,
+        role: employee.role,
+      };
+    }
+
+    let totalPrice = 0;
+    let totalDuration = 0;
+    let currentDate =DateTime.fromJSDate(assignment.assignment_date, { zone: "UTC" })
+      .setZone(assignment.timezone)
+      .toISODate();
+
+    if (assignmentDate) {
+      currentDate = assignmentDate;
+    }
+
+    const startDateTime = DateTime.fromISO(`${currentDate}T${startTime}`, {
+      zone: assignment.timezone,
+    });
+    const endDateTime = endTime
+      ? DateTime.fromISO(`${currentDate}T${endTime}`, {
+        zone: assignment.timezone,
+      })
+      : startDateTime.plus({ minutes: totalDuration });
+
+    if(assignmentDate) updates.assignment_date = startDateTime.toUTC().toJSDate();
+    if(startTime) updates.start_time = startDateTime.toUTC().toFormat("HH:mm");
+    if(endTime) updates.end_time = endDateTime.toUTC().toFormat("HH:mm");
+    updates.timezone = assignment.timezone;
+
+    if (endDateTime <= startDateTime) {
+      return res.status(400).send({ error: "End time cannot be earlier than start time" });
+    }
+
+    if (
+      (employeeId || assignmentDate || startTime || endTime) &&
+      (updates.start_time || updates.assignment_date || updates.employee_id)
+    ) {
+      const checkEmployeeId = employeeId || assignment.employee_id;
+      const checkAssignmentDate =
+        updates.assignment_date || assignment.assignment_date;
+      const checkStartTime = updates.start_time || assignment.start_time;
+      const checkEndTime = updates.end_time || assignment.end_time;
+    }
 
     res.send(assignment);
   } catch (e) {
@@ -249,7 +332,7 @@ AssignmentsServiceRoute.patch("/calendar/:id", async (req, res, next) => {
  * @openapi
  * components:
  *   schemas:
- *     UserInfo:
+ *     Staff:
  *       type: object
  *       properties:
  *         first_name:

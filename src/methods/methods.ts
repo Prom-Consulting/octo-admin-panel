@@ -1,6 +1,6 @@
 import crypto from "crypto";
-import type { BranchInfo } from "../models/OrganizationStaff.ts";
-import Branch from "../models/Branch.ts";
+import type { BranchInfo } from "../modules/staff/OrganizationStaff.ts";
+import Branch from "../modules/organization/Branch.ts";
 
 export async function generatePassword(length = 8) {
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*";

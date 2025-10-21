@@ -1,6 +1,6 @@
 import type { Response, Request, NextFunction } from "express";
 import jwt from "jsonwebtoken";
-import OrganizationStaff from "../models/OrganizationStaff.ts";
+import OrganizationStaff from "../modules/staff/OrganizationStaff.ts";
 import { envConfig } from "../../config/envConfig.ts";
 
 const JWT_SECRET = envConfig.JWT_SECRET!;

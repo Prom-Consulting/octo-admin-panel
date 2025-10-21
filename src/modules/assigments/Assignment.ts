@@ -1,6 +1,6 @@
 import { DataTypes, Model, type Optional } from "sequelize";
-import { sequelize } from "../dbConfig/dbConfig";
-import type { ClientInfo, Employee, ServiceInfo } from "../types";
+import { sequelize } from "../../dbConfig/dbConfig.ts";
+import type { ClientInfo, Employee, ServiceInfo } from "../../types";
 
 export const ASSIGNMENT_STATUSES = ["new", "scheduled", "completed", "canceled"] as const;
 export type AssignmentStatus = typeof ASSIGNMENT_STATUSES[number];
@@ -116,7 +116,7 @@ Assignment.init(
     },
     notes: { type: DataTypes.STRING, allowNull: true },
     source: { type: DataTypes.STRING, allowNull: false },
-    discount: { type: DataTypes.INTEGER, allowNull: true, defaultValue: 0 },
+    discount: { type: DataTypes.DECIMAL(5, 2), allowNull: true, defaultValue: 0 },
     final_price: { type: DataTypes.INTEGER, allowNull: false },
     total_duration: { type: DataTypes.INTEGER, allowNull: false },
     payment_method: { type: DataTypes.STRING, allowNull: true },

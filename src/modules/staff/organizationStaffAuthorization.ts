@@ -1,10 +1,10 @@
 import { Router } from "express";
 import type { Response, Request, NextFunction } from "express";
-import OrganizationStaff from "../models/OrganizationStaff.ts";
+import OrganizationStaff from "./OrganizationStaff.ts";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import { authenticateToken } from "../middleware/authStaffMiddleware.ts";
-import { envConfig } from "../../config/envConfig.ts";
+import { authenticateToken } from "../../middleware/authStaffMiddleware.ts";
+import { envConfig } from "../../../config/envConfig.ts";
 
 const JWT_SECRET = envConfig.JWT_SECRET!;
 const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET!;
