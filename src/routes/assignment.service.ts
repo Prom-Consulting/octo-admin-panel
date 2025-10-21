@@ -1,5 +1,13 @@
-import express from "express";
+import express, { type Response, type NextFunction } from "express";
 import Assignment from "../models/Assignment.ts";
+import transformPrices from "../utils /transformPrices.ts";
+import Organization from "../models/Organization.ts";
+import { DateTime } from "luxon";
+import idGeneration from "../utils /idGeneration.ts";
+import z from "zod";
+import { Op } from "sequelize";
+import Client from "../models/Client.ts";
+import OrganizationStaff from "../models/OrganizationStaff.ts";
 
 const AssignmentsServiceRoute = express.Router();
 
@@ -29,55 +37,190 @@ AssignmentsServiceRoute.get("/:id", (req, res, next) => {
   }
 });
 
-AssignmentsServiceRoute.post("/calendar", async (req, res, next) => {
-  try {
-    const {
-      clientAssignment
-    } = req.body;
+const CreateAssignmentSchema = z.object({
+  organizationId: z.number().int().positive(),
+  branchId: z.number().int().positive(),
+  timezone: z.string().default("UTC"),
+  clientId: z.number().int().positive(),
+  employeeId: z.number().int().positive(),
+  assignmentDate: z.string(),
+  startTime: z.string(),
+  notes: z.string().nullable().optional(),
+  source: z.enum(["web", "mobile", "admin", "booking"]),
+  discount: z.number().min(0).max(100).default(0),
+  service: z.object({
+    id: z.number().int().positive(),
+    name: z.string(),
+    price: z.number(),
+    duration: z.number(),
+  }),
+  additionalServices: z
+    .array(
+      z.object({
+        id: z.number().int().positive(),
+        price: z.number(),
+        duration: z.number(),
+      })
+    )
+    .default([]),
+});
 
-    if (!clientAssignment) {
-      res.status(404).send({ error: "No data available to create assignment" });
+type CreateAssignmentInput = z.infer<typeof CreateAssignmentSchema>;
+
+const checkTimeOverlap = async (
+  employeeId: number,
+  branchId: number,
+  assignmentDate: Date,
+  startTime: string,
+  endTime: string
+): Promise<boolean> => {
+  const overlap = await Assignment.findOne({
+    where: {
+      employee_id: employeeId,
+      branch_id: branchId,
+      assignment_date: assignmentDate,
+      status: { [Op.notIn]: ["canceled", "completed"] },
+      [Op.and]: [
+        { start_time: { [Op.lt]: endTime } },
+        { end_time: { [Op.gt]: startTime } },
+      ],
+    },
+  });
+  return !!overlap;
+};
+
+AssignmentsServiceRoute.post("/calendar", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const data = CreateAssignmentSchema.parse(req.body);
+
+    const {
+      organizationId,
+      branchId,
+      timezone,
+      clientId,
+      employeeId,
+      service,
+      additionalServices,
+      assignmentDate,
+      startTime,
+      notes,
+      source,
+      discount,
+    } = data;
+
+    // --- Проверяем организацию, клиента, сотрудника ---
+    const organization = await Organization.findByPk(organizationId);
+    if (!organization) {
+      return res.status(404).json({ error: "Organization not found" });
     }
 
-    const assignment = await Assignment.create({
-      id: clientAssignment.id,
-      chat_id: clientAssignment.chat_id || null,
-      branch_id: clientAssignment.branch_id,
-      organization_id: clientAssignment.organization_id,
-      client_id: clientAssignment.client_id,
-      client_snapshot: clientAssignment.client_snapshot,
-      service_id: clientAssignment.service_id,
-      service_snapshot: clientAssignment.service_snapshot,
-      assignment_date: clientAssignment.assignment_date,
-      start_time: clientAssignment.start_time,
-      end_time: clientAssignment.end_time,
+    const client = await Client.findByPk(clientId);
+    if (!client) {
+      return res.status(404).json({ error: "Client not found" });
+    }
 
-      manager_id: clientAssignment.manager_id || null,
-      manager_snapshot: clientAssignment.manager_snapshot || null,
-      employee_id: clientAssignment.employee_id,
-      employee_snapshot: clientAssignment.employee_snapshot,
+    const employee = await OrganizationStaff.scope("employees").findByPk(employeeId);
+    if (!employee) {
+      return res.status(404).json({ error: "Employee not found" });
+    }
 
-      timezone: clientAssignment.timezone || "UTC",
-      status: clientAssignment.status || "new",
+    const totalPrice =
+      transformPrices(service.price) +
+      additionalServices.reduce((sum: number, s: any) => sum + transformPrices(s.price), 0);
 
-      additional_services: clientAssignment.additional_services || [],
-      notes: clientAssignment.notes || null,
-      source: clientAssignment.source,
+    const totalDuration =
+      service.duration +
+      additionalServices.reduce((sum: number, s: any) => sum + s.duration, 0);
 
-      discount: clientAssignment.discount || 0,
-      final_price: clientAssignment.final_price,
-      total_duration: clientAssignment.total_duration,
-      payment_method: clientAssignment.payment_method || null,
-      paid: clientAssignment.paid || "unpaid",
+    const finalPrice = Math.max(
+      0,
+      totalPrice - (totalPrice * discount) / 100
+    );
+
+    // --- Формирование времени и проверка пересечений ---
+    const startDateTime = DateTime.fromISO(`${assignmentDate}T${startTime}`, {
+      zone: timezone,
     });
-    res.send(assignment);
-  } catch (e) {
-    console.log(e);
-    next(e);
+    const endDateTime = startDateTime.plus({ minutes: totalDuration });
+
+    const assignmentDateUTC = startDateTime.startOf("day").toUTC().toJSDate();
+    const startTimeUTC = startDateTime.toUTC().toFormat("HH:mm");
+    const endTimeUTC = endDateTime.toUTC().toFormat("HH:mm");
+
+    const overlap = await checkTimeOverlap(
+      employeeId,
+      branchId,
+      assignmentDateUTC,
+      startTimeUTC,
+      endTimeUTC
+    );
+    if (overlap) {
+      return res.status(409).json({
+        error: "The employee is already booked at this time",
+        details: { startTimeUTC, endTimeUTC },
+      });
+    }
+
+    // --- Создание записи ---
+    const newAssignment = await Assignment.create({
+      id: idGeneration(`ORG${organizationId}`, 6),
+      organization_id: organizationId,
+      branch_id: branchId,
+      assignment_date: assignmentDateUTC,
+      start_time: startTimeUTC,
+      end_time: endTimeUTC,
+      client_id: client.id,
+      client_snapshot: {
+        first_name: client.first_name,
+        last_name: client.last_name || null,
+        phone: client.phone_number,
+      },
+      employee_id: employee.id,
+      employee_snapshot: {
+        first_name: employee.firstname,
+        last_name: employee.lastname || null,
+        role: employee.role,
+      },
+      service_id: service.id,
+      service_snapshot: {
+        name: service.name,
+        price: service.price,
+        duration: service.duration,
+      },
+      additional_services:
+        additionalServices.length > 0 ? additionalServices : null,
+      status: "new",
+      notes: notes || null,
+      source,
+      discount: discount || 0,
+      final_price: finalPrice,
+      total_duration: totalDuration,
+      payment_method: null,
+      paid: "unpaid",
+      timezone,
+    });
+
+    return res.send({
+      success: true,
+      data: newAssignment,
+      message: "Assignment created successfully",
+    });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({
+        error: "Validation error",
+        details: error.issues.map((e) => ({
+          field: e.path.join("."),
+          message: e.message,
+        })),
+      });
+    }
+    console.error("Error creating assignment:", error);
+    next(error);
   }
 });
 
-AssignmentsServiceRoute.put("/calendar/:id", async (req, res, next) => {
+AssignmentsServiceRoute.patch("/calendar/:id", async (req, res, next) => {
   try {
     const {
       clientAssignment
