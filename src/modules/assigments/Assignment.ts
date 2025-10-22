@@ -9,7 +9,7 @@ export const ASSIGMENT_PAID = ["paid", "unpaid", "refund"];
 export type AssignmentPaid = typeof ASSIGMENT_PAID[number];
 
 export interface AssignmentAttributes {
-  id: string;
+  id: number;
   chat_id?: string | null;
   branch_id: number;
   organization_id: number;
@@ -40,6 +40,7 @@ export interface AssignmentAttributes {
 
 export type AssignmentCreationAttributes = Optional<
   AssignmentAttributes,
+  "id"
   | "createdAt"
   | "manager_id"
   | "manager_snapshot"
@@ -56,7 +57,7 @@ export class Assignment
   extends Model<AssignmentAttributes, AssignmentCreationAttributes>
   implements AssignmentAttributes
 {
-  declare id: string;
+  declare id: number;
   declare chat_id: string | null;
   declare branch_id: number;
   declare organization_id: number;
@@ -88,8 +89,9 @@ export class Assignment
 Assignment.init(
   {
     id: {
-      type: DataTypes.TEXT,
+      type: DataTypes.INTEGER,
       primaryKey: true,
+      autoIncrement: true,
     },
     organization_id: { type: DataTypes.INTEGER, allowNull: false },
     client_id: { type: DataTypes.INTEGER, allowNull: false },

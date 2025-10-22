@@ -8,33 +8,68 @@ import Assignment, {
 import transformPrices from "../../utils /transformPrices.ts";
 import Organization from "../organization/Organization.ts";
 import { DateTime } from "luxon";
-import idGeneration from "../../utils /idGeneration.ts";
 import z from "zod";
 import Client from "../client/Client.ts";
 import OrganizationStaff from "../staff/OrganizationStaff.ts";
-import WorkingDates from "../staff/WorkingDates.ts";
 import { checkTimeOverlap } from "./checkTimeOverlap.ts";
 import { CreateAssignmentSchema } from "./assignment.schema.ts";
 import Branch from "../organization/Branch.ts";
-import { Op } from "sequelize";
+import { Op, type WhereOptions } from "sequelize";
 import { authenticateToken, authorizeRoles } from "../../middleware/authStaffMiddleware.ts";
+import axios from "axios";
 
 const AssignmentsServiceRoute = express.Router();
 
-AssignmentsServiceRoute.get("/", (req, res, next) => {
+AssignmentsServiceRoute.get("/", async (req, res, next) => {
   try {
-    const assignment = Assignment.findAll();
-    res.send(assignment);
+    const { employeeId, branchId } = req.query;
+    const date = req.query.date as string;
+
+    const where: WhereOptions<Assignment> = {};
+
+    if (!branchId) {
+      return res.status(400).send({ error: "branchId is required" });
+    }
+
+    const branch = await Branch.findByPk(Number(branchId));
+    if (!branch) {
+      return res.status(400).send({ error: "Branch not found" });
+    }
+
+    if (date) {
+      const tz = branch.timezone || "UTC";
+      const startOfDay = DateTime.fromISO(date, { zone: tz })
+        .startOf("day")
+        .toUTC()
+        .toJSDate();
+
+      const endOfDay = DateTime.fromISO(date, { zone: tz })
+      .endOf("day")
+      .toUTC()
+      .toJSDate();
+      where.assignment_date = { [Op.between]: [startOfDay, endOfDay] };
+    }
+
+    if (branch) {
+      where.branch_id = branch.id;
+    }
+
+    if (employeeId) {
+      where.employee_id = Number(employeeId);
+    }
+
+    const assignments = await Assignment.findAll({ where });
+    res.send(assignments);
   } catch (e) {
     console.log(e);
     next(e);
   }
 });
 
-AssignmentsServiceRoute.get("/:id", (req, res, next) => {
+AssignmentsServiceRoute.get("/:id", async (req, res, next) => {
   try {
     const { id } = req.params;
-    const assignment = Assignment.findByPk(id);
+    const assignment = await Assignment.findByPk(id);
 
     if (!assignment) {
       return res.status(404).send({error: "No Assignment found with this id"});
@@ -46,7 +81,6 @@ AssignmentsServiceRoute.get("/:id", (req, res, next) => {
     next(e);
   }
 });
-
 
 AssignmentsServiceRoute.post("/", async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -82,7 +116,7 @@ AssignmentsServiceRoute.post("/", async (req: Request, res: Response, next: Next
       return res.status(404).json({ error: "Client not found" });
     }
 
-    const employee = await OrganizationStaff.scope("employees").findByPk(employeeId);
+    const employee = await OrganizationStaff.findByPk(employeeId);
     if (!employee) {
       return res.status(404).json({ error: "Employee not found" });
     }
@@ -141,7 +175,6 @@ AssignmentsServiceRoute.post("/", async (req: Request, res: Response, next: Next
 
     // --- Создание записи ---
     const newAssignment = await Assignment.create({
-      id: idGeneration(organization.name + "_" + organizationId, 6),
       organization_id: organizationId,
       branch_id: branchId,
       assignment_date: assignmentDateUTC,
@@ -204,7 +237,7 @@ AssignmentsServiceRoute.post("/", async (req: Request, res: Response, next: Next
   }
 });
 
-AssignmentsServiceRoute.patch("/calendar/:id",
+AssignmentsServiceRoute.patch("/:id",
   authenticateToken, authorizeRoles("manager"),
   async (req, res, next) => {
   try {
@@ -240,7 +273,7 @@ AssignmentsServiceRoute.patch("/calendar/:id",
 
     let employeeSnapshot = assignment.employee_snapshot;
     if (employeeId) {
-      const employee = await OrganizationStaff.scope("employees").findByPk(employeeId);
+      const employee = await OrganizationStaff.findByPk(employeeId);
       if (!employee) return res.status(404).json({ error: "Employee not found" });
       updates.employee_id = employeeId;
       employeeSnapshot = {
@@ -250,8 +283,6 @@ AssignmentsServiceRoute.patch("/calendar/:id",
       };
       updates.employee_snapshot = employeeSnapshot;
     }
-
-
 
     let totalPrice = 0;
     let totalDuration = 0;
@@ -267,54 +298,49 @@ AssignmentsServiceRoute.patch("/calendar/:id",
       totalPrice += normalizedService.price;
       totalDuration += service.duration;
     } else {
-      totalPrice += assignment.service_snapshot.price;
-      totalDuration += assignment.service_snapshot.duration;
+      totalPrice += assignment.final_price;
+      totalDuration += assignment.total_duration;
     }
 
-    let currentDate = assignmentDate
-      ? DateTime.fromISO(assignmentDate, { zone: assignment.timezone }).toISODate()
-      : DateTime.fromJSDate(assignment.assignment_date, { zone: "UTC" }).setZone(assignment.timezone).toISODate();
+    const currentDate = assignmentDate
+      ? DateTime.fromISO(assignmentDate, { zone: assignment.timezone })
+      : DateTime.fromJSDate(assignment.assignment_date, { zone: "utc" }).setZone(assignment.timezone).startOf("day");
 
-    let startDateTime = DateTime.fromISO(`${currentDate}T${startTime ?? assignment.start_time}`, {
-      zone: assignment.timezone,
-    });
-    let endDateTime = endTime
-      ? DateTime.fromISO(`${currentDate}T${endTime}`, { zone: assignment.timezone })
-      : startDateTime.plus({ minutes: totalDuration });
+    const start = startTime ?? assignment.start_time;
+    const end = endTime ?? assignment.end_time;
+
+    const startDateTime = DateTime.fromISO(`${currentDate.toISODate()}T${start}`, { zone: assignment.timezone });
+    let endDateTime = DateTime.fromISO(`${currentDate.toISODate()}T${end}`, { zone: assignment.timezone });
+
+    if (!endTime) {
+      endDateTime = startDateTime.plus({ minutes: totalDuration });
+    }
 
     if (endDateTime <= startDateTime) {
       return res.status(400).json({ error: "End time cannot be earlier than start time" });
     }
 
-    updates.assignment_date = startDateTime.toUTC().toJSDate();
-    updates.start_time = startDateTime.toUTC().toFormat("HH:mm");
-    updates.end_time = endDateTime.toUTC().toFormat("HH:mm");
-    updates.timezone = assignment.timezone;
+    if (assignmentDate) updates.assignment_date = startDateTime.toUTC().toJSDate();
+    if (startTime) updates.start_time = startDateTime.toUTC().toFormat("HH:mm");
+    if (endTime) updates.end_time = endDateTime.toUTC().toFormat("HH:mm");
 
-    if (employeeId || assignmentDate || startTime || endTime) {
-      const checkEmployeeId = employeeId ?? assignment.employee_id;
-      const checkAssignmentDate = updates.assignment_date ?? assignment.assignment_date;
-      const checkStartTime = updates.start_time ?? assignment.start_time;
-      const checkEndTime = updates.end_time ?? assignment.end_time;
-
-      const overlap = await Assignment.findOne({
-        where: {
-          employee_id: checkEmployeeId,
-          branch_id: assignment.branch_id,
-          assignment_date: checkAssignmentDate,
-          id: { [Op.ne]: assignment.id },
-          status: { [Op.notIn]: ["canceled", "completed"] },
-          [Op.and]: [
-            { start_time: { [Op.lt]: checkEndTime } },
-            { end_time: { [Op.gt]: checkStartTime } },
-          ],
-        },
-      });
-
-      if (overlap) {
-        return res.status(409).json({ error: "The employee is already booked at this time" });
-      }
-    }
+    // if (employeeId || assignmentDate || startTime || endTime) {
+    //   const checkEmployeeId = employeeId ?? assignment.employee_id;
+    //   const checkAssignmentDate = updates.assignment_date ?? assignment.assignment_date;
+    //   const checkStartTime = updates.start_time ?? assignment.start_time;
+    //   const checkEndTime = updates.end_time ?? assignment.end_time;
+    //
+    //   const overlap = await checkTimeOverlap(
+    //     checkEmployeeId,
+    //     assignment.branch_id,
+    //     checkAssignmentDate,
+    //     checkStartTime,
+    //     checkEndTime
+    //   );
+    //   if (overlap) {
+    //     return res.status(409).json({ error: "The employee is already booked at this time" });
+    //   }
+    // }
 
     const normalizedAdditional = Array.isArray(additionalServices)
       ? additionalServices.map((s: any) => ({ ...s, price: transformPrices(s.price) }))
@@ -330,10 +356,7 @@ AssignmentsServiceRoute.patch("/calendar/:id",
 
     const discountValue = discount ?? assignment.discount ?? 0;
     updates.discount = discountValue;
-    console.log("total price", totalPrice);
-    console.log("discountValue", discountValue);
     updates.final_price = Math.max(0, Math.round(totalPrice - (totalPrice * discountValue) / 100));
-    console.log("final price", updates.final_price);
     updates.total_duration = totalDuration;
 
     const managerDb = await OrganizationStaff.scope("managers").findByPk(manager.id);
@@ -350,7 +373,7 @@ AssignmentsServiceRoute.patch("/calendar/:id",
         return res.status(400).json({ error: "Invalid paid value" });
       }
       updates.paid = paid;
-      if (paid && !paymentMethod) {
+      if (paid && paid !=="refund" && !paymentMethod) {
         return res.status(400).json({ error: "Payment method required when marking as paid" });
       }
       updates.payment_method = paymentMethod;
@@ -360,6 +383,82 @@ AssignmentsServiceRoute.patch("/calendar/:id",
       return res.status(400).json({ error: "No fields to update" });
     }
 
+    if (paid === "refund") {
+      try {
+        await axios.patch(
+          `http://localhost:3000/accounting/refund/${assignment.id}?branch_id=${assignment.branch_id}`,
+          {
+            status: "refund",
+            refund_date: DateTime.now().setZone(assignment.timezone).toUTC().toJSDate(),
+          },
+          {
+            headers: {
+              authorization: `Bearer ${managerDb.token}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
+        return res.send({
+          message:
+            "Assignment updated successfully. Related accounting record marked as 'refund'.",
+          assignment,
+        });
+      } catch (e) {
+        return res.status(400).send({ error: e });
+      }
+    }
+
+
+    if (paid === "paid" && status === "completed") {
+      const client = assignment.client_snapshot;
+      const employee = assignment.employee_snapshot;
+      const managerSnap = updates.manager_snapshot;
+
+      if (
+        !updates.payment_method ||
+        !assignment.total_duration ||
+        !updates.final_price
+      ) {
+        return res
+          .status(400)
+          .send({ error: "Missing required fields for accounting" });
+      }
+
+      const newAccounting = {
+        branch_id: assignment.branch_id,
+        client_id: assignment.client_id,
+        client_snapshot: {
+          first_name: client.first_name,
+          last_name: client.last_name || null,
+          phone: client.phone,
+        },
+        employee_id: assignment.employee_id,
+        employee_snapshot: employee,
+        manager_id: updates.manager_id,
+        manager_snapshot: managerSnap,
+        assignment_id: assignment.id,
+        duration: assignment.total_duration,
+        payment_method: updates.payment_method,
+        discount: updates.discount || assignment.discount || 0,
+        date: DateTime.now().setZone(assignment.timezone).toUTC().toJSDate(),
+        timezone: assignment.timezone,
+        amount: updates.final_price,
+        status: "success",
+      }
+
+      try {
+        await axios.post("http://localhost:3000/accounting?branch_id=" + assignment.branch_id, {...newAccounting}, {
+          headers: {
+            authorization: `Bearer ${managerDb.token}`,
+            "Content-Type": "application/json",
+          },
+        });
+      } catch (e) {
+        console.log(e);
+        return res.status(400).send({ error: e });
+      }
+    }
     await assignment.update(updates);
     return res.json({ message: "Assignment updated successfully", assignment });
   } catch (e) {
@@ -368,255 +467,331 @@ AssignmentsServiceRoute.patch("/calendar/:id",
   }
 });
 
+AssignmentsServiceRoute.delete("/:id", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    const assignment = await Assignment.findByPk(id);
+
+    if (!assignment) {
+      return res.status(400).json({error: "Assignment not found"});
+    }
+
+    if (assignment.paid === "paid") {
+      return res.status(400).json({error: "You cannot delete a paid assignment."});
+    }
+
+    await assignment.destroy();
+  } catch (e) {
+    next(e);
+  }
+});
+
+
+export default  AssignmentsServiceRoute;
+
 /**
- * @openapi
+ * @swagger
+ * tags:
+ *   name: Assignments
+ *   description: Управление записями (назначениями) клиентов
+ */
+
+/**
+ * @swagger
+ * /assignments:
+ *   get:
+ *     summary: Получить список всех записей
+ *     tags: [Assignments]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: branchId
+ *         schema:
+ *           type: integer
+ *         description: ID филиала
+ *       - in: query
+ *         name: date
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: Фильтрация по дате (в формате YYYY-MM-DD)
+ *       - in: query
+ *         name: employeeId
+ *         schema:
+ *           type: integer
+ *         description: ID сотрудника
+ *     responses:
+ *       200:
+ *         description: Успешный ответ со списком назначений
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Assignment'
+ *       401:
+ *         description: Неавторизован
+ */
+
+/**
+ * @swagger
+ * /assignments:
+ *   post:
+ *     summary: Создать новую запись
+ *     tags: [Assignments]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/CreateAssignmentDto'
+ *     responses:
+ *       201:
+ *         description: Запись успешно создана
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   $ref: '#/components/schemas/Assignment'
+ *       400:
+ *         description: Ошибка валидации или конфликт времени
+ *       401:
+ *         description: Неавторизован
+ */
+
+/**
+ * @swagger
+ * /assignments/{id}:
+ *   get:
+ *     summary: Получить данные конкретной записи
+ *     tags: [Assignments]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID записи
+ *     responses:
+ *       200:
+ *         description: Данные записи
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   $ref: '#/components/schemas/Assignment'
+ *       404:
+ *         description: Назначение не найдено
+ *       401:
+ *         description: Неавторизован
+ */
+
+/**
+ * @swagger
+ * /assignments/{id}:
+ *   patch:
+ *     summary: Обновить данные записи
+ *     tags: [Assignments]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID записи
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/UpdateAssignmentDto'
+ *     responses:
+ *       200:
+ *         description: Назначение успешно обновлено
+ *       400:
+ *         description: Ошибка валидации
+ *       404:
+ *         description: Назначение не найдено
+ */
+
+/**
+ * @swagger
+ * /assignments/{id}:
+ *   delete:
+ *     summary: Удалить назначение
+ *     tags: [Assignments]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Назначение успешно удалено
+ *       404:
+ *         description: Назначение не найдено
+ */
+
+/**
+ * @swagger
  * components:
  *   schemas:
- *     Staff:
- *       type: object
- *       properties:
- *         first_name:
- *           type: string
- *           example: "Jane"
- *         last_name:
- *           type: string
- *           example: "Doe"
- *           nullable: true
- *         role:
- *           type: string
- *           example: "employee"
- *
- *     ClientInfo:
- *       type: object
- *       properties:
- *         first_name:
- *           type: string
- *           example: "John"
- *         last_name:
- *           type: string
- *           example: "Smith"
- *           nullable: true
- *         phone:
- *           type: string
- *           example: "+123456789"
- *
- *     ServiceInfo:
- *       type: object
- *       properties:
- *         id:
- *           type: integer
- *           example: 1
- *         name:
- *           type: string
- *           example: "Haircut"
- *         price:
- *           type: number
- *           example: 50
- *         duration:
- *           type: number
- *           example: 60
- *
  *     Assignment:
  *       type: object
  *       properties:
  *         id:
- *           type: string
- *           example: "a1b2c3d4"
- *         chat_id:
- *           type: string
- *           example: "chat123"
- *           nullable: true
- *         branch_id:
  *           type: integer
- *           example: 2
- *         organization_id:
+ *         organizationId:
  *           type: integer
- *           example: 1
- *         client_id:
+ *         branchId:
  *           type: integer
- *           example: 10
- *         client_snapshot:
- *           $ref: '#/components/schemas/ClientInfo'
- *         service_id:
+ *         clientId:
  *           type: integer
- *           example: 1
- *         service_snapshot:
- *           $ref: '#/components/schemas/ServiceInfo'
- *         assignment_date:
- *           type: string
- *           format: date
- *           example: "2025-10-15"
- *         start_time:
- *           type: string
- *           example: "10:00"
- *         end_time:
- *           type: string
- *           example: "11:00"
- *         manager_id:
+ *         employeeId:
  *           type: integer
- *           example: 3
- *           nullable: true
- *         manager_snapshot:
- *           $ref: '#/components/schemas/UserInfo'
- *           nullable: true
- *         employee_id:
- *           type: integer
- *           example: 5
- *         employee_snapshot:
- *           $ref: '#/components/schemas/UserInfo'
- *         timezone:
- *           type: string
- *           example: "Asia/Bishkek"
- *         status:
- *           type: string
- *           enum: [new, scheduled, completed, canceled]
- *           example: "new"
- *         additional_services:
+ *         service:
+ *           type: object
+ *           description: Основная услуга
+ *           properties:
+ *             id:
+ *               type: integer
+ *             name:
+ *               type: string
+ *             duration:
+ *               type: integer
+ *             price:
+ *               type: number
+ *         additionalServices:
  *           type: array
+ *           description: Дополнительные услуги
  *           items:
- *             $ref: '#/components/schemas/ServiceInfo'
- *           nullable: true
+ *             type: object
+ *             properties:
+ *               id:
+ *                 type: integer
+ *               name:
+ *                 type: string
+ *               duration:
+ *                 type: integer
+ *               price:
+ *                 type: number
+ *         assignmentDate:
+ *           type: string
+ *           format: date-time
+ *         startTime:
+ *           type: string
+ *           format: time
+ *         endTime:
+ *           type: string
+ *           format: time
  *         notes:
  *           type: string
- *           example: "Client requested extra service"
  *           nullable: true
  *         source:
  *           type: string
- *           example: "web_booking"
+ *           description: Источник (например, "online", "manual")
  *         discount:
  *           type: number
- *           example: 10
- *           nullable: true
- *         final_price:
- *           type: number
- *           example: 90
- *         total_duration:
- *           type: number
- *           example: 60
- *         payment_method:
+ *           description: Скидка на услугу (в % или сумме)
+ *         status:
  *           type: string
- *           example: "cash"
- *           nullable: true
- *         paid:
- *           type: string
- *           enum: [paid, unpaid, refund]
- *           example: "unpaid"
+ *           enum: [pending, confirmed, completed, cancelled]
  *         createdAt:
  *           type: string
  *           format: date-time
- *           example: "2025-10-15T10:00:00Z"
  *         updatedAt:
  *           type: string
  *           format: date-time
- *           example: "2025-10-15T10:00:00Z"
  *
- * /assignments:
- *   get:
- *     summary: Get all assignments
- *     tags:
- *       - Assignments
- *     responses:
- *       200:
- *         description: List of assignments
- *         content:
- *           application/json:
- *             schema:
- *               type: array
- *               items:
- *                 $ref: '#/components/schemas/Assignment'
- *       500:
- *         description: Server error
- *
- * /assignments/{id}:
- *   get:
- *     summary: Get assignment by ID
- *     tags:
- *       - Assignments
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         example: "a1b2c3d4"
- *     responses:
- *       200:
- *         description: Assignment found
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Assignment'
- *       404:
- *         description: Assignment not found
- *         content:
- *           application/json:
- *             example: { "error": "No Assignment found with this id" }
- *       500:
- *         description: Server error
- *
- * /assignments/calendar:
- *   post:
- *     summary: Create a new assignment
- *     tags:
- *       - Assignments
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
+ *     CreateAssignmentDto:
+ *       type: object
+ *       required:
+ *         - organizationId
+ *         - branchId
+ *         - clientId
+ *         - employeeId
+ *         - service
+ *         - assignmentDate
+ *         - startTime
+ *       properties:
+ *         organizationId:
+ *           type: integer
+ *         branchId:
+ *           type: integer
+ *         clientId:
+ *           type: integer
+ *         employeeId:
+ *           type: integer
+ *         service:
+ *           type: object
+ *         additionalServices:
+ *           type: array
+ *           items:
  *             type: object
- *             required:
- *               - clientAssignment
- *             properties:
- *               clientAssignment:
- *                 $ref: '#/components/schemas/Assignment'
- *     responses:
- *       200:
- *         description: Assignment created
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Assignment'
- *       400:
- *         description: Validation error
- *       500:
- *         description: Server error
- *
- * /assignments/calendar/{id}:
- *   put:
- *     summary: Update an existing assignment
- *     tags:
- *       - Assignments
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
+ *         assignmentDate:
  *           type: string
- *         example: "a1b2c3d4"
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - clientAssignment
- *             properties:
- *               clientAssignment:
- *                 $ref: '#/components/schemas/Assignment'
- *     responses:
- *       200:
- *         description: Assignment updated
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Assignment'
- *       404:
- *         description: Assignment not found
- *       500:
- *         description: Server error
+ *           format: date
+ *           example: 2025-10-22
+ *         startTime:
+ *           type: string
+ *           example: "10:00"
+ *         notes:
+ *           type: string
+ *           nullable: true
+ *         source:
+ *           type: string
+ *           example: "online"
+ *         discount:
+ *           type: number
+ *           example: 10
+ *
+ *     UpdateAssignmentDto:
+ *       type: object
+ *       properties:
+ *         service:
+ *           type: object
+ *         additionalServices:
+ *           type: array
+ *         assignmentDate:
+ *           type: string
+ *         startTime:
+ *           type: string
+ *         endTime:
+ *           type: string
+ *         status:
+ *           type: string
+ *           enum: [pending, confirmed, completed, cancelled]
+ *         notes:
+ *           type: string
+ *         discount:
+ *           type: number
+ *
+ *   securitySchemes:
+ *     bearerAuth:
+ *       type: http
+ *       scheme: bearer
+ *       bearerFormat: JWT
  */
-
-
-export default  AssignmentsServiceRoute;

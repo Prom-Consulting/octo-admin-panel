@@ -7,7 +7,6 @@ import Assignment from "../assigments/Assignment.ts";
 import { authMiddleware } from "../../middleware/auth.ts";
 import { DateTime } from "luxon";
 import { envConfig } from "../../../config/envConfig.ts";
-import idGeneration from "../../utils /idGeneration.ts";
 import Organization from "../organization/Organization.ts";
 import jwt from "jsonwebtoken";
 
@@ -304,7 +303,6 @@ AssignmentsBookingServiceRoute.post(
 
       // Создание записи в общей БД
       const newAssignment = await Assignment.create({
-        id: idGeneration(`ORG${organizationId}`, 6),
         organization_id: organizationId,
         branch_id: branchId,
         assignment_date: assignmentDateUTC,
