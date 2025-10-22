@@ -1,6 +1,6 @@
 import { Router } from "express";
 import type { Response, Request, NextFunction } from "express";
-import OrganizationStaff from "./OrganizationStaff.ts";
+import OrganizationStaff, { generateToken } from "./OrganizationStaff.ts";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { authenticateToken } from "../../middleware/authStaffMiddleware.ts";
@@ -57,15 +57,12 @@ OrganizationStaffAuthorizationRouter.post(
       }
 
       // Генерация токенов
-      const accessToken = jwt.sign(
-        {
-          email: staff.email,
-          role: staff.role,
-          organizationId: staff.organization.id,
-        },
-        JWT_SECRET,
-        { expiresIn: "30d" }
-      );
+      const accessToken = generateToken({
+        email,
+        role:staff.role,
+        organizationId:staff.organization.id,
+        organizationName: staff.organization.name
+      });
 
       const refreshToken = jwt.sign(
         {
@@ -80,14 +77,13 @@ OrganizationStaffAuthorizationRouter.post(
       await staff.update({ token: accessToken });
 
       // Подготовка данных для ответа (без пароля)
-      const staffData = staff.toJSON();
+      const { password: _, email: __, ...staffData } = staff.toJSON();
 
       return res.status(200).json({
         success: true,
         message: "Login successful",
         data: {
           user: staffData,
-          accessToken,
           refreshToken,
         },
       });

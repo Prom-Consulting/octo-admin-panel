@@ -41,5 +41,5 @@ export interface ClientInfo {
 
 export interface OrganizationInfo {
   id: number;
-  branches: { id: number; name: string }[];
+  name: string;
 }

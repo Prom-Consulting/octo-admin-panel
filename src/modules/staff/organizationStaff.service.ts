@@ -1,11 +1,10 @@
 import { Router } from "express";
 import type { Response, Request, NextFunction } from "express";
-import OrganizationStaff from "./OrganizationStaff.ts";
+import OrganizationStaff, { generateToken } from "./OrganizationStaff.ts";
 import { sequelize } from "../../dbConfig/dbConfig.ts";
 import { Op } from "sequelize";
 import { ALLOWED_ROLES, type StaffRole } from "../../constants/roles.ts";
 import bcrypt from "bcrypt";
-import jwt from "jsonwebtoken";
 import { validateBranches } from "../../methods/methods.ts";
 import Branch from "../organization/Branch.ts";
 import {
@@ -13,15 +12,14 @@ import {
   authorizeRoles,
   checkOrganizationAccess,
 } from "../../middleware/authStaffMiddleware.ts";
-import { envConfig } from "../../../config/envConfig.ts";
+import Organization from "../organization/Organization.ts";
 
-const JWT_SECRET = envConfig.JWT_SECRET!;
 const SALT_ROUNDS = 10;
 
 const OrganizationStaffRouter = Router();
 
 // Все роуты защищены авторизацией
-// OrganizationStaffRouter.use(authenticateToken);
+OrganizationStaffRouter.use(authenticateToken);
 
 // Получение всех сотрудников организации
 OrganizationStaffRouter.get(
@@ -134,12 +132,12 @@ OrganizationStaffRouter.get(
 // Создание нового сотрудника (только для manage and owner)
 OrganizationStaffRouter.post(
   "/",
-  // authorizeRoles("manager", "owner"),
-  // checkOrganizationAccess,
+  authorizeRoles("manager", "owner"),
+  checkOrganizationAccess,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const {
-        organization,
+        organizationId,
         branches = [],
         firstname,
         lastname,
@@ -155,11 +153,16 @@ OrganizationStaffRouter.post(
       } = req.body;
 
       // Валидация обязательных полей
-      if (!organization || !organization.id) {
+      if (!organizationId) {
         return res.status(400).json({
           success: false,
-          message: "organization with id is required",
+          message: "organization id with id is required",
         });
+      }
+
+      const organization = await Organization.findByPk(organizationId);
+      if (!organization) {
+        return res.status(400).json({ error: "Organization not found" });
       }
 
       if (!firstname || !lastname || !password || !email) {
@@ -170,7 +173,7 @@ OrganizationStaffRouter.post(
       }
 
       // Валидация филиалов
-      const branchValidation = await validateBranches(branches, organization.id);
+      const branchValidation = await validateBranches(branches, organizationId);
 
       if (!branchValidation.isValid) {
         return res.status(400).json({
@@ -204,15 +207,14 @@ OrganizationStaffRouter.post(
       const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
 
       // Создание токена
-      const token = jwt.sign(
-        { email, role, organizationId: organization.id },
-        JWT_SECRET,
-        { expiresIn: "30d" }
-      );
+      const token = generateToken({ email, role, organizationId, organizationName: organization.name });
 
       // Создание сотрудника с валидированными филиалами
       const newStaff = await OrganizationStaff.create({
-        organization,
+        organization: {
+          id: organizationId,
+          name: organization.name,
+        },
         branches: branchValidation.validBranches!,
         firstname,
         lastname,
@@ -229,7 +231,7 @@ OrganizationStaffRouter.post(
       });
 
       // Возвращаем сотрудника без пароля
-      const staffData = newStaff.toJSON();
+      const { password: _, email: __, ...staffData } = newStaff.toJSON();
 
       return res.status(201).json({
         success: true,
