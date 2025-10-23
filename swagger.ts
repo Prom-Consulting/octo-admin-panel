@@ -22,7 +22,7 @@ const options = {
     ],
   },
   // Пути к файлам, где описаны эндпоинты (js/ts с JSDoc-комментами)
-  apis: [path.join(__dirname, "./src/routes/*.ts")],
+  apis: [path.join(__dirname, "./src/modules/*/*.ts")],
 };
 
 const swaggerSpec = swaggerJsdoc(options);
