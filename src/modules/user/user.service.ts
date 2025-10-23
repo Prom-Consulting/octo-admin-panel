@@ -82,7 +82,7 @@ UserServiceRoute.post(
           organizationName: organization.name,
         },
         envConfig.JWT_SECRET!,
-        { expiresIn: "24h" } // срок жизни токена
+        { expiresIn: "365d" } // срок жизни токена
       );
 
       return res.status(200).json({
