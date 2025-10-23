@@ -1,7 +1,7 @@
 import { DataTypes, Model, type Optional } from "sequelize";
-import { sequelize } from "../dbConfig/dbConfig.ts";
+import { sequelize } from "../../dbConfig/dbConfig.ts";
 import Client from "./Client.ts";
-import Branch from "./Branch.ts";
+import Branch from "../organization/Branch.ts";
 
 export interface ClientActivityAttributes {
   id: number;

@@ -1,11 +1,11 @@
 import type { NextFunction, Request, Response } from "express";
 import { Router } from "express";
-import User from "../models/User.ts";
-import { env } from "../dbConfig/dbConfig.ts";
+import User from "./User.ts";
 import jwt from "jsonwebtoken";
-import type { UserToCreate } from "../types";
+import type { UserToCreate } from "../../types";
 import bcrypt from "bcrypt";
-import Organization from "../models/Organization.ts";
+import Organization from "../organization/Organization.ts";
+import { envConfig } from "../../../config/envConfig.ts";
 
 const UserServiceRoute = Router();
 
@@ -81,8 +81,8 @@ UserServiceRoute.post(
           role: user.role,
           organizationName: organization.name,
         },
-        env.JWT_SECRET!,
-        { expiresIn: "24h" } // срок жизни токена
+        envConfig.JWT_SECRET!,
+        { expiresIn: "365d" } // срок жизни токена
       );
 
       return res.status(200).json({

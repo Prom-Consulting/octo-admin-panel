@@ -20,19 +20,6 @@ interface Service {
   updatedAt: string;
 }
 
-export interface OrganizationWithBranchesServices {
-  id: number;
-  name: string;
-  organizationBranches: {
-    id: number;
-    name: string;
-    phone: string;
-    address: string;
-    isActive: boolean;
-    services: Service;
-  }[];
-}
-
 export interface Employee {
   first_name: string;
   last_name?: string | null;
@@ -54,5 +41,5 @@ export interface ClientInfo {
 
 export interface OrganizationInfo {
   id: number;
-  branches: { id: number; name: string }[];
+  name: string;
 }

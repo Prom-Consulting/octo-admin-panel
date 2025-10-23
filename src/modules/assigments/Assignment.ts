@@ -1,6 +1,6 @@
 import { DataTypes, Model, type Optional } from "sequelize";
-import { sequelize } from "../dbConfig/dbConfig";
-import type { ClientInfo, Employee, ServiceInfo } from "../types";
+import { sequelize } from "../../dbConfig/dbConfig.ts";
+import type { ClientInfo, Employee, ServiceInfo } from "../../types";
 
 export const ASSIGNMENT_STATUSES = ["new", "scheduled", "completed", "canceled"] as const;
 export type AssignmentStatus = typeof ASSIGNMENT_STATUSES[number];
@@ -9,7 +9,7 @@ export const ASSIGMENT_PAID = ["paid", "unpaid", "refund"];
 export type AssignmentPaid = typeof ASSIGMENT_PAID[number];
 
 export interface AssignmentAttributes {
-  id: string;
+  id: number;
   chat_id?: string | null;
   branch_id: number;
   organization_id: number;
@@ -40,6 +40,7 @@ export interface AssignmentAttributes {
 
 export type AssignmentCreationAttributes = Optional<
   AssignmentAttributes,
+  "id"
   | "createdAt"
   | "manager_id"
   | "manager_snapshot"
@@ -56,7 +57,7 @@ export class Assignment
   extends Model<AssignmentAttributes, AssignmentCreationAttributes>
   implements AssignmentAttributes
 {
-  declare id: string;
+  declare id: number;
   declare chat_id: string | null;
   declare branch_id: number;
   declare organization_id: number;
@@ -88,8 +89,9 @@ export class Assignment
 Assignment.init(
   {
     id: {
-      type: DataTypes.TEXT,
+      type: DataTypes.INTEGER,
       primaryKey: true,
+      autoIncrement: true,
     },
     organization_id: { type: DataTypes.INTEGER, allowNull: false },
     client_id: { type: DataTypes.INTEGER, allowNull: false },
@@ -116,7 +118,7 @@ Assignment.init(
     },
     notes: { type: DataTypes.STRING, allowNull: true },
     source: { type: DataTypes.STRING, allowNull: false },
-    discount: { type: DataTypes.INTEGER, allowNull: true, defaultValue: 0 },
+    discount: { type: DataTypes.DECIMAL(5, 2), allowNull: true, defaultValue: 0 },
     final_price: { type: DataTypes.INTEGER, allowNull: false },
     total_duration: { type: DataTypes.INTEGER, allowNull: false },
     payment_method: { type: DataTypes.STRING, allowNull: true },

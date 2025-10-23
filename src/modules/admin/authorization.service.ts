@@ -1,5 +1,5 @@
 import { type NextFunction, type Request, type Response, Router } from "express";
-import AdminModel from "../models/AdminModel.ts";
+import AdminModel from "./AdminModel.ts";
 import bcrypt from "bcrypt";
 
 const authorizationService = Router();

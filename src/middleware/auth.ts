@@ -1,5 +1,6 @@
 import jwt from "jsonwebtoken";
 import type { Request, Response, NextFunction } from "express";
+import { envConfig } from "../../config/envConfig.ts";
 
 export const authMiddleware = (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -13,7 +14,7 @@ export const authMiddleware = (req: Request, res: Response, next: NextFunction) 
       return res.status(401).json({ message: "Token missing" });
     }
 
-    const secret = process.env.JWT_SECRET!;
+    const secret = envConfig.JWT_SECRET!;
     const decoded = jwt.verify(token, secret);
     (req as any).user = decoded; // прикрепляем юзера к req
     next();

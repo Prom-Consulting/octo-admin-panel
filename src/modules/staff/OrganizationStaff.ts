@@ -1,6 +1,8 @@
 import { DataTypes, Model, type Optional } from "sequelize";
-import { sequelize } from "../dbConfig/dbConfig.ts";
-import type { OrganizationInfo } from "../types";
+import { sequelize } from "../../dbConfig/dbConfig.ts";
+import type { OrganizationInfo } from "../../types";
+import jwt from "jsonwebtoken";
+import { envConfig } from "../../../config/envConfig.ts";
 
 export interface BranchInfo {
   id: number;
@@ -30,6 +32,13 @@ export interface OrganizationStaffAttributes {
   photo_url?: string | null;
   createdAt?: Date;
   updatedAt?: Date;
+}
+
+export interface StaffToken {
+  email: string;
+  role: string;
+  organizationId: number;
+  organizationName: string;
 }
 
 export type OrganizationStaffCreationAttributes = Optional<
@@ -110,7 +119,7 @@ OrganizationStaff.init(
     photo_url: { type: DataTypes.STRING(255), allowNull: true },
   },
   {
-    tableName: "users",
+    tableName: "staff",
     sequelize,
     timestamps: true,
     indexes: [
@@ -121,9 +130,9 @@ OrganizationStaff.init(
         using: "GIN",
       },
     ],
-    defaultScope: {
-      attributes: { exclude: ["password", "email"] },
-    },
+    // defaultScope: {
+    //   attributes: { exclude: ["password", "email"] },
+    // },
   }
 );
 
@@ -140,5 +149,13 @@ OrganizationStaff.addScope("employees", {
 OrganizationStaff.addScope("byBranch", (branchId: number) => ({
   where: sequelize.literal(`branches @> '[{"id": ${branchId}}]'`),
 }));
+
+export const generateToken = ({ email, role, organizationId, organizationName }: StaffToken) => {
+  return jwt.sign(
+    { email, role, organizationId, organizationName },
+    envConfig.JWT_SECRET || "default_secret",
+    { expiresIn: "30d" }
+  );
+}
 
 export default OrganizationStaff;
