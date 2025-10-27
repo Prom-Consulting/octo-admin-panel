@@ -23,7 +23,11 @@ interface Service {
 export interface Employee {
   first_name: string;
   last_name?: string | null;
-  role: "manager" | "employee";
+  role: string;
+}
+
+export interface UserInfo extends Employee {
+  id: number;
 }
 
 export interface ServiceInfo {

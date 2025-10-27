@@ -17,8 +17,8 @@ export interface OrganizationStaffAttributes {
   branches: BranchInfo[]; // массив филиалов где работает сотрудник
 
   username?: string | null;
-  firstname: string;
-  lastname: string;
+  first_name: string;
+  last_name: string;
   password: string;
   email: string;
   token?: string | null;
@@ -61,8 +61,8 @@ export class OrganizationStaff
   declare id: number;
   declare organization: OrganizationInfo;
   declare branches: BranchInfo[];
-  declare firstname: string;
-  declare lastname: string;
+  declare first_name: string;
+  declare last_name: string;
   declare username: string | null;
   declare password: string;
   declare email: string;
@@ -90,8 +90,8 @@ OrganizationStaff.init(
       allowNull: false,
       defaultValue: [], // по умолчанию пустой массив
     },
-    firstname: { type: DataTypes.TEXT, allowNull: false },
-    lastname: { type: DataTypes.TEXT, allowNull: false },
+    first_name: { type: DataTypes.TEXT, allowNull: false },
+    last_name: { type: DataTypes.TEXT, allowNull: false },
     username: { type: DataTypes.TEXT, allowNull: true },
     password: { type: DataTypes.TEXT, allowNull: false },
     token: { type: DataTypes.TEXT, allowNull: true },
