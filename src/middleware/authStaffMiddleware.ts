@@ -144,7 +144,7 @@ export const checkOrganizationAccess = (
   }
 
   if (req.user.role === "owner") {
-    next();
+    return next();
   }
 
   const organizationId = req.query.organizationId || req.body.organization?.id;
