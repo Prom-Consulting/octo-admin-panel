@@ -80,9 +80,10 @@ UserServiceRoute.post(
           id: user.id,
           role: user.role,
           organizationName: organization.name,
+          email: user.email,
         },
         envConfig.JWT_SECRET!,
-        { expiresIn: "365d" } // срок жизни токена
+        { expiresIn: "7d" } // срок жизни токена
       );
 
       return res.status(200).json({
@@ -91,6 +92,9 @@ UserServiceRoute.post(
         token,
         user: {
           id: user.id,
+          role: user.role,
+          first_name: user.first_name,
+          last_name: user.last_name,
         },
       });
     } catch (e) {
