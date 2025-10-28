@@ -1,6 +1,6 @@
 import { Router } from "express";
 import type { Response, Request, NextFunction } from "express";
-import OrganizationStaff, { generateToken } from "./OrganizationStaff.ts";
+import OrganizationStaff from "./OrganizationStaff.ts";
 import { sequelize } from "../../dbConfig/dbConfig.ts";
 import { Op } from "sequelize";
 import { ALLOWED_ROLES, type StaffRole } from "../../constants/roles.ts";
@@ -13,13 +13,16 @@ import {
   checkOrganizationAccess,
 } from "../../middleware/authStaffMiddleware.ts";
 import Organization from "../organization/Organization.ts";
+import axios from "axios";
+import { octoApi } from "../../constants/urls.ts";
+import User from "../user/User.ts";
 
 const SALT_ROUNDS = 10;
 
 const OrganizationStaffRouter = Router();
 
 // Все роуты защищены авторизацией
-// OrganizationStaffRouter.use(authenticateToken);
+OrganizationStaffRouter.use(authenticateToken);
 
 // Получение всех сотрудников организации
 OrganizationStaffRouter.get(
@@ -132,25 +135,38 @@ OrganizationStaffRouter.get(
 // Создание нового сотрудника (только для manage and owner)
 OrganizationStaffRouter.post(
   "/",
-  // authorizeRoles("manager", "owner"),
+  authorizeRoles("manager", "owner"),
   // checkOrganizationAccess,
   async (req: Request, res: Response, next: NextFunction) => {
+    const transaction = await sequelize.transaction();
+    const tokenHeader = req.headers.authorization!.split(" ")[1];
+
+    const {
+      organizationId,
+      branches = [],
+      firstname,
+      lastname,
+      username,
+      password,
+      email,
+      role = "employee",
+      customRole,
+      specialty,
+      description,
+      is_active = true,
+      photo_url,
+
+      //для создания зарплаты
+      baseSalary,
+      commissionRate,
+    } = req.body;
+
     try {
-      const {
-        organizationId,
-        branches = [],
-        firstname,
-        lastname,
-        username,
-        password,
-        email,
-        role = "employee",
-        customRole,
-        specialty,
-        description,
-        is_active = true,
-        photo_url,
-      } = req.body;
+      const user = await User.findByPk(req.user?.id);
+
+      if (!user) {
+        return res.sendStatus(400).json({error: "User not found"});
+      }
 
       // Валидация обязательных полей
       if (!organizationId) {
@@ -203,32 +219,46 @@ OrganizationStaffRouter.post(
         });
       }
 
-      // Хеширование пароля
       const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
+      // const token = generateToken({ email, role, organizationId, organizationName: organization.name });
 
-      // Создание токена
-      const token = generateToken({ email, role, organizationId, organizationName: organization.name });
-
-      // Создание сотрудника с валидированными филиалами
       const newStaff = await OrganizationStaff.create({
         organization: {
           id: organizationId,
           name: organization.name,
         },
         branches: branchValidation.validBranches!,
-        firstname,
-        lastname,
+        first_name: firstname,
+        last_name: lastname,
         username,
         password: hashedPassword,
         email,
-        token,
         role,
         customRole,
         specialty,
         description,
         is_active,
         photo_url,
-      });
+      }, { transaction });
+
+
+      await axios.post(`${octoApi}salaries?branch_id=6`, {
+        staff: {
+          id: newStaff.id,
+          first_name: newStaff.first_name,
+          last_name: newStaff.last_name,
+          role: newStaff.role,
+        },
+          baseSalary: baseSalary,
+          commissionRate: commissionRate,
+        },{
+        headers: {
+          authorization: `Bearer ${tokenHeader}`,
+          "Content-Type": "application/json",
+        },
+        });
+
+      await transaction.commit();
 
       // Возвращаем сотрудника без пароля
       const { password: _, email: __, ...staffData } = newStaff.toJSON();
@@ -238,9 +268,19 @@ OrganizationStaffRouter.post(
         message: "Staff member created successfully",
         data: staffData,
       });
-    } catch (e) {
-      console.error("Error in createStaff:", e);
-      next(e);
+    } catch (error) {
+      await transaction.rollback();
+      if (axios.isAxiosError(error)) {
+        return res.status(error.response?.status || 500).json({
+          success: false,
+          message: error.response?.data?.message || error.message,
+          data: error.response?.data || null,
+          url: error.config?.url,
+          method: error.config?.method,
+        });
+      }
+      console.error("Error in createStaff:", error);
+      next(error);
     }
   }
 );
@@ -248,7 +288,7 @@ OrganizationStaffRouter.post(
 // Обновление сотрудника (только для manager)
 OrganizationStaffRouter.put(
   "/:id",
-  authorizeRoles("manager"),
+  // authorizeRoles("manager"),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { id } = req.params;

@@ -78,21 +78,18 @@ ClientServiceRouter.post(
         is_active: true,
       });
 
-      const clientActivity = await ClientActivity.create({
-        client_id: client.id,
-        branch_id,
-        service_id: 1,
-      });
-
-      console.log(clientActivity);
+      // const clientActivity = await ClientActivity.create({
+      //   client_id: client.id,
+      //   branch_id,
+      //   service_id: 1,
+      // });
 
       return res.send({
         message: "Client added successfully",
         client,
       });
     } catch (e) {
-      console.log("Error: " + e);
-
+      console.log("Client create error" + e);
       next(e);
     }
   }
@@ -179,47 +176,47 @@ ClientServiceRouter.patch(
 );
 
 //API для обновления/создания активности клиента
-ClientServiceRouter.patch(
-  "/:id/last-activity",
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const clientId = Number(req.params.id);
-      const { branch_id, service_id } = req.body;
-
-      if (!branch_id || !service_id) {
-        return res
-          .status(400)
-          .send({ message: "branch_id and service_name are required" });
-      }
-
-      const existingBranch = await Branch.findByPk(branch_id);
-      if (!existingBranch) {
-        return res.status(404).send({ error: "Branch not found" });
-      }
-
-      const lastActivity = await ClientActivity.findOne({
-        where: { client_id: clientId, branch_id },
-        order: [["last_active_at", "DESC"]],
-      });
-
-      if (lastActivity) {
-        lastActivity.service_id = service_id;
-        await lastActivity.save();
-      } else {
-        await ClientActivity.create({
-          client_id: clientId,
-          branch_id,
-          service_id,
-        });
-      }
-
-      return res.send({ message: "Client activity updated successfully" });
-    } catch (e) {
-      console.log(e);
-      next(e);
-    }
-  }
-);
+// ClientServiceRouter.patch(
+//   "/:id/last-activity",
+//   async (req: Request, res: Response, next: NextFunction) => {
+//     try {
+//       const clientId = Number(req.params.id);
+//       const { branch_id, service_id } = req.body;
+//
+//       if (!branch_id || !service_id) {
+//         return res
+//           .status(400)
+//           .send({ message: "branch_id and service_name are required" });
+//       }
+//
+//       const existingBranch = await Branch.findByPk(branch_id);
+//       if (!existingBranch) {
+//         return res.status(404).send({ error: "Branch not found" });
+//       }
+//
+//       const lastActivity = await ClientActivity.findOne({
+//         where: { client_id: clientId, branch_id },
+//         order: [["last_active_at", "DESC"]],
+//       });
+//
+//       if (lastActivity) {
+//         lastActivity.service_id = service_id;
+//         await lastActivity.save();
+//       } else {
+//         await ClientActivity.create({
+//           client_id: clientId,
+//           branch_id,
+//           service_id,
+//         });
+//       }
+//
+//       return res.send({ message: "Client activity updated successfully" });
+//     } catch (e) {
+//       console.log(e);
+//       next(e);
+//     }
+//   }
+// );
 
 ClientServiceRouter.patch(
   "/:id",

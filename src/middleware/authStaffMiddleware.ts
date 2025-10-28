@@ -2,6 +2,7 @@ import type { Response, Request, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import OrganizationStaff from "../modules/staff/OrganizationStaff.ts";
 import { envConfig } from "../../config/envConfig.ts";
+import User from "../modules/user/User.ts";
 
 const JWT_SECRET = envConfig.JWT_SECRET!;
 
@@ -13,7 +14,7 @@ declare global {
         id: number;
         email: string;
         role: string;
-        organizationId: number;
+        organizationId?: number | null;
       };
     }
   }
@@ -41,31 +42,44 @@ export const authenticateToken = async (
     const decoded = jwt.verify(token, JWT_SECRET) as {
       email: string;
       role: string;
-      organizationId: number;
+      organizationId?: number;
+      organizationName?: string;
     };
 
-    // Проверяем существование пользователя в базе
+    const user = await User.findOne({
+      where: { email: decoded.email },
+      attributes: ['id', 'email', 'role', 'first_name', 'last_name'],
+    });
+
+    if (user) {
+      req.user = {
+        id: user.id,
+        email: user.email,
+        role: user.role || 'owner',
+        organizationId: null,
+      };
+      return next();
+    }
+
     const staff = await OrganizationStaff.findOne({
       where: { email: decoded.email, token },
-      attributes: ["id", "email", "role", "organization", "is_active"],
+      attributes: ['id', 'email', 'role', 'organization', 'is_active', 'first_name', 'last_name'],
     });
 
     if (!staff) {
       return res.status(401).json({
         success: false,
-        message: "Invalid token or user not found",
+        message: 'Invalid token or user not found',
       });
     }
 
-    // Проверяем активность пользователя
     if (!staff.is_active) {
       return res.status(403).json({
         success: false,
-        message: "Account is deactivated",
+        message: 'Account is deactivated',
       });
     }
 
-    // Добавляем информацию о пользователе в request
     req.user = {
       id: staff.id,
       email: staff.email,
@@ -91,6 +105,7 @@ export const authenticateToken = async (
       success: false,
       message: "Internal server error",
     });
+
   }
 };
 
@@ -126,6 +141,10 @@ export const checkOrganizationAccess = (
       success: false,
       message: "Authentication required",
     });
+  }
+
+  if (req.user.role === "owner") {
+    return next();
   }
 
   const organizationId = req.query.organizationId || req.body.organization?.id;
