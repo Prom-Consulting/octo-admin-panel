@@ -1,5 +1,5 @@
 import express from "express";
-import { authenticateToken, authorizeRoles } from "../../middleware/authStaffMiddleware.ts";
+import { authenticateToken } from "../../middleware/authStaffMiddleware.ts";
 import {
   createAssignment,
   deleteAssignment,
@@ -14,7 +14,7 @@ AssignmentsServiceRoute.get("/", getListAssignments);
 AssignmentsServiceRoute.get("/:id", getAssignmentById);
 AssignmentsServiceRoute.post("/", createAssignment);
 AssignmentsServiceRoute.patch("/:id",
-  authenticateToken, authorizeRoles("manager", "owner"), editAssignment);
+  authenticateToken, editAssignment);
 
 AssignmentsServiceRoute.delete("/:id", deleteAssignment);
 
@@ -35,26 +35,31 @@ export default  AssignmentsServiceRoute;
  *     tags: [Assignments]
  *     parameters:
  *       - in: query
- *         name: branchId
+ *         name: branch_id
  *         required: true
  *         schema:
  *           type: integer
- *         description: ID филиала
+ *         description: ID филиала (обязателен)
  *       - in: query
  *         name: date
  *         schema:
  *           type: string
  *           format: date
  *           example: 2025-10-24
- *         description: Фильтр по дате (локальной для филиала)
+ *         description: Фильтр по дате. Дата передаётся в локальной таймзоне филиала, а фильтрация выполняется по диапазону UTC.
  *       - in: query
- *         name: employeeId
+ *         name: employee_id
  *         schema:
  *           type: integer
- *         description: ID сотрудника
+ *         description: ID сотрудника (необязательно)
+ *       - in: query
+ *         name: client_id
+ *         schema:
+ *           type: integer
+ *         description: ID клиента (необязательно)
  *     responses:
  *       200:
- *         description: Успешный ответ
+ *         description: Успешный ответ со списком назначений
  *         content:
  *           application/json:
  *             schema:
@@ -62,16 +67,14 @@ export default  AssignmentsServiceRoute;
  *               items:
  *                 $ref: '#/components/schemas/Assignment'
  *       400:
- *         description: Отсутствует branchId или неверные данные
- *       404:
- *         description: Филиал не найден
+ *         description: Не указан branch_id или филиал не найден
  */
 
 /**
  * @swagger
  * /assignments/{id}:
  *   get:
- *     summary: Получить данные конкретной записи.
+ *     summary: Получить данные конкретной записи
  *     tags: [Assignments]
  *     parameters:
  *       - in: path
@@ -82,7 +85,7 @@ export default  AssignmentsServiceRoute;
  *         description: ID записи
  *     responses:
  *       200:
- *         description: Данные назначения.
+ *         description: Данные назначения
  *         content:
  *           application/json:
  *             schema:
@@ -97,8 +100,6 @@ export default  AssignmentsServiceRoute;
  *   post:
  *     summary: Создать новое назначение
  *     tags: [Assignments]
- *     security:
- *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -107,7 +108,7 @@ export default  AssignmentsServiceRoute;
  *             $ref: '#/components/schemas/CreateAssignmentDto'
  *     responses:
  *       200:
- *         description: Успешное создание
+ *         description: Назначение успешно создано
  *         content:
  *           application/json:
  *             schema:
@@ -116,22 +117,28 @@ export default  AssignmentsServiceRoute;
  *                 success:
  *                   type: boolean
  *                   example: true
+ *                 data:
+ *                   $ref: '#/components/schemas/Assignment'
  *                 message:
  *                   type: string
  *                   example: Assignment created successfully
- *                 data:
- *                   $ref: '#/components/schemas/Assignment'
- *       400:
- *         description: Ошибка валидации или пересечение по времени
  *       404:
- *         description: Не найден клиент / сотрудник / филиал
+ *         description: Организация, филиал, клиент или сотрудник не найдены
+ *       409:
+ *         description: Пересечение по времени — сотрудник уже занят
+ *       400:
+ *         description: Ошибка валидации данных
  */
 
 /**
  * @swagger
  * /assignments/{id}:
  *   patch:
- *     summary: Обновить назначение
+ *     summary: Обновить данные назначения
+ *     description: |
+ *       Обновляет информацию о назначении (услуги, время, статус, оплату и т.д.).
+ *       Если назначение имеет статус **completed** и оплачено (**paid**),
+ *       автоматически создаётся запись в модуле **Accounting** на другом бэкенде.
  *     tags: [Assignments]
  *     security:
  *       - bearerAuth: []
@@ -141,6 +148,7 @@ export default  AssignmentsServiceRoute;
  *         required: true
  *         schema:
  *           type: integer
+ *         description: ID назначения
  *     requestBody:
  *       required: true
  *       content:
@@ -149,13 +157,39 @@ export default  AssignmentsServiceRoute;
  *             $ref: '#/components/schemas/UpdateAssignmentDto'
  *     responses:
  *       200:
- *         description: Назначение успешно обновлено
+ *         description: Назначение успешно обновлено.
+ *           Если назначение выполнено и оплачено — создана запись в учёте (Accounting).
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   $ref: '#/components/schemas/Assignment'
+ *                 message:
+ *                   type: string
+ *                   example: Assignment updated successfully (Accounting entry created)
  *       400:
  *         description: Неверные данные (валидация, время и т.д.)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *       404:
- *         description: Назначение или пользователь не найден
+ *         description: Назначение, сотрудник или пользователь не найдены
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *       409:
  *         description: Конфликт времени — сотрудник уже занят
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 
 /**
@@ -164,8 +198,6 @@ export default  AssignmentsServiceRoute;
  *   delete:
  *     summary: Удалить назначение
  *     tags: [Assignments]
- *     security:
- *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -255,21 +287,21 @@ export default  AssignmentsServiceRoute;
  *     CreateAssignmentDto:
  *       type: object
  *       required:
- *         - organizationId
- *         - branchId
- *         - clientId
- *         - employeeId
+ *         - organization_id
+ *         - branch_id
+ *         - client_id
+ *         - employee_id
  *         - service
- *         - assignmentDate
- *         - startTime
+ *         - assignment_date
+ *         - start_time
  *       properties:
- *         organizationId:
+ *         organization_id:
  *           type: integer
- *         branchId:
+ *         branch_id:
  *           type: integer
- *         clientId:
+ *         client_id:
  *           type: integer
- *         employeeId:
+ *         employee_id:
  *           type: integer
  *         service:
  *           type: object
@@ -278,15 +310,15 @@ export default  AssignmentsServiceRoute;
  *             name: { type: string }
  *             price: { type: number }
  *             duration: { type: integer }
- *         additionalServices:
+ *         additional_services:
  *           type: array
  *           items:
  *             type: object
- *         assignmentDate:
+ *         assignment_date:
  *           type: string
  *           format: date
  *           example: 2025-10-25
- *         startTime:
+ *         start_time:
  *           type: string
  *           example: "09:00"
  *         notes:
@@ -304,14 +336,14 @@ export default  AssignmentsServiceRoute;
  *       properties:
  *         service:
  *           type: object
- *         additionalServices:
+ *         additional_services:
  *           type: array
- *         assignmentDate:
+ *         assignment_date:
  *           type: string
  *           format: date
- *         startTime:
+ *         start_time:
  *           type: string
- *         endTime:
+ *         end_time:
  *           type: string
  *         status:
  *           type: string
@@ -323,7 +355,7 @@ export default  AssignmentsServiceRoute;
  *         paid:
  *           type: string
  *           enum: [paid, unpaid, refund]
- *         paymentMethod:
+ *         payment_method:
  *           type: string
  *           example: "cash"
  *

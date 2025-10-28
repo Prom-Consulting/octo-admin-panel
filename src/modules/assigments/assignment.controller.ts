@@ -316,7 +316,7 @@ export const editAssignment = async (req: Request, res: Response, next: NextFunc
     // }
 
     const normalizedAdditional = Array.isArray(additional_services)
-      ? additional_services.map((s: any) => ({ ...s, price: transformPrices(s.price) }))
+      ? additional_services.map((s) => ({ ...s, price: transformPrices(s.price) }))
       : [];
 
     if (normalizedAdditional.length > 0) {
@@ -454,7 +454,7 @@ export const editAssignment = async (req: Request, res: Response, next: NextFunc
     }
     await assignment.update(updates);
     return res.json({
-      message: "Assignment updated successfully" + assignment.paid === "paid" ? "Created accounting" : "",
+      message: `Assignment updated successfully ${assignment.paid === "paid" ? "Created accounting" : ""}`,
       assignment
     });
   } catch (e) {
