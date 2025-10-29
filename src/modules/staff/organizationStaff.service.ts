@@ -863,7 +863,7 @@ export default OrganizationStaffRouter;
 
 /**
  * @swagger
- * /organizationStaff:
+ * /staff:
  *   get:
  *     summary: Получить список сотрудников организации
  *     tags: [OrganizationStaff]
@@ -899,7 +899,7 @@ export default OrganizationStaffRouter;
 
 /**
  * @swagger
- * /organizationStaff/byBranch:
+ * /staff/byBranch:
  *   get:
  *     summary: Получить сотрудников по филиалу
  *     tags: [OrganizationStaff]
@@ -940,7 +940,7 @@ export default OrganizationStaffRouter;
 
 /**
  * @swagger
- * /organizationStaff:
+ * /staff:
  *   post:
  *     summary: Создать нового сотрудника
  *     tags: [OrganizationStaff]
@@ -998,7 +998,7 @@ export default OrganizationStaffRouter;
 
 /**
  * @swagger
- * /organizationStaff/{id}:
+ * /staff/{id}:
  *   put:
  *     summary: Обновить сотрудника полностью
  *     tags: [OrganizationStaff]
@@ -1031,7 +1031,7 @@ export default OrganizationStaffRouter;
 
 /**
  * @swagger
- * /organizationStaff/{id}:
+ * /staff/{id}:
  *   patch:
  *     summary: Частичное обновление сотрудника
  *     tags: [OrganizationStaff]
@@ -1064,7 +1064,7 @@ export default OrganizationStaffRouter;
 
 /**
  * @swagger
- * /organizationStaff/{id}:
+ * /staff/{id}:
  *   delete:
  *     summary: Удалить сотрудника
  *     tags: [OrganizationStaff]
@@ -1090,7 +1090,7 @@ export default OrganizationStaffRouter;
 
 /**
  * @swagger
- * /organizationStaff/{id}/de-activate:
+ * /staff/{id}/de-activate:
  *   patch:
  *     summary: Активировать или деактивировать сотрудника
  *     tags: [OrganizationStaff]
@@ -1118,7 +1118,7 @@ export default OrganizationStaffRouter;
 
 /**
  * @swagger
- * /organizationStaff/{id}/branches:
+ * /staff/{id}/branches:
  *   post:
  *     summary: Добавить сотрудника к филиалу
  *     tags: [OrganizationStaff]
@@ -1154,7 +1154,7 @@ export default OrganizationStaffRouter;
 
 /**
  * @swagger
- * /organizationStaff/{id}/branches/{branchId}:
+ * /staff/{id}/branches/{branchId}:
  *   delete:
  *     summary: Удалить сотрудника из филиала
  *     tags: [OrganizationStaff]
