@@ -2,16 +2,20 @@ import express from "express";
 import Branch from "./Branch.ts";
 import type { WhereOptions } from "sequelize";
 import Organization from "./Organization.ts";
+import User from "../user/User.ts";
 
 const BranchServiceRoute = express.Router();
 
 BranchServiceRoute.get("/", async (req, res, next) => {
   try {
-    const { organizationId } = req.query;
+    const { organizationId, ownerId } = req.query;
     const where: WhereOptions<Branch> = {};
 
     if (organizationId) {
       where.organization_id = Number(organizationId);
+    }
+    if (ownerId) {
+      where.user_id = Number(ownerId);
     }
 
     const listBranches = await Branch.findAll({ where });
@@ -39,7 +43,14 @@ BranchServiceRoute.get("/:id", async (req, res, next) => {
 
 BranchServiceRoute.post("/", async (req, res, next) => {
   try {
-    const { organizationId, name, phone, address, timezone } = req.body;
+    const {
+      organizationId,
+      name,
+      phone,
+      address,
+      timezone,
+      user_id
+    } = req.body;
 
     if (!organizationId || !name || !phone || !address || !timezone) {
       return res
@@ -56,6 +67,11 @@ BranchServiceRoute.post("/", async (req, res, next) => {
     const branches = await Branch.findAll({
       where: { organization_id: organizationId },
     });
+
+    const user = await User.findByPk(user_id);
+    if (!user) {
+      return res.status(404).send({ error: "User not found" });
+    }
 
     const branchLimit = organization.branches ?? 1;
 
@@ -81,6 +97,7 @@ BranchServiceRoute.post("/", async (req, res, next) => {
       phone,
       address,
       timezone,
+      user_id
     });
     return res.send({ message: "Branch created successfully.", newBranch });
   } catch (e) {
