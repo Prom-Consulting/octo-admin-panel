@@ -44,7 +44,7 @@ BranchServiceRoute.post("/", async (req, res, next) => {
     if (!organizationId || !name || !phone || !address || !timezone) {
       return res
         .status(400)
-        .send({ error: " owner_id, name, phone and address are required" });
+        .send({ error: " owner_id, name, phone, timezone and address are required" });
     }
 
     const organization = await Organization.findByPk(organizationId);

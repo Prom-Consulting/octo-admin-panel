@@ -242,21 +242,21 @@ OrganizationStaffRouter.post(
       }, { transaction });
 
 
-      await axios.post(`${octoApi}salaries?branch_id=6`, {
-        staff: {
-          id: newStaff.id,
-          first_name: newStaff.first_name,
-          last_name: newStaff.last_name,
-          role: newStaff.role,
-        },
-          baseSalary: baseSalary,
-          commissionRate: commissionRate,
-        },{
-        headers: {
-          authorization: `Bearer ${tokenHeader}`,
-          "Content-Type": "application/json",
-        },
-        });
+      // await axios.post(`${octoApi}salaries?branch_id=6`, {
+      //   staff: {
+      //     id: newStaff.id,
+      //     first_name: newStaff.first_name,
+      //     last_name: newStaff.last_name,
+      //     role: newStaff.role,
+      //   },
+      //     baseSalary: baseSalary,
+      //     commissionRate: commissionRate,
+      //   },{
+      //   headers: {
+      //     authorization: `Bearer ${tokenHeader}`,
+      //     "Content-Type": "application/json",
+      //   },
+      //   });
 
       await transaction.commit();
 
