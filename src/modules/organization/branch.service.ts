@@ -52,8 +52,17 @@ BranchServiceRoute.post("/", async (req, res, next) => {
     if (!organization) {
       return res.status(400).send({ error: "Organization not found" });
     }
-    if ((organization.branches ?? 0) <= 0) {
-      return res.status(400).send({ error: "User cannot have more branches" });
+
+    const branches = await Branch.findAll({
+      where: { organization_id: organizationId },
+    });
+
+    const branchLimit = organization.branches ?? 1;
+
+    if (branches.length >= branchLimit) {
+      return res.status(400).send({
+        error: `Organization has reached its branch limit (${branchLimit})`,
+      });
     }
 
     const currentBranches = await Branch.count({
