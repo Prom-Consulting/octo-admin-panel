@@ -1,3 +1,5 @@
+import type { AssignmentPaidMethod } from "./modules/assigments/Assignment.ts";
+
 export interface UserToCreate {
   first_name: string;
   last_name?: string;
@@ -46,4 +48,14 @@ export interface ClientInfo {
 export interface OrganizationInfo {
   id: number;
   name: string;
+}
+
+export interface PaymentPart {
+  type: AssignmentPaidMethod;
+  amount: number;
+}
+
+export interface PaymentMethod {
+  methods: PaymentPart[];
+  total: number;
 }

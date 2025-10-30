@@ -1,6 +1,6 @@
 import { DataTypes, Model, type Optional } from "sequelize";
 import { sequelize } from "../../dbConfig/dbConfig.ts";
-import type { ClientInfo, Employee, ServiceInfo } from "../../types";
+import type { ClientInfo, Employee, PaymentMethod, ServiceInfo } from "../../types";
 
 export const ASSIGNMENT_STATUSES = ["new", "scheduled", "completed", "canceled"] as const;
 export type AssignmentStatus = typeof ASSIGNMENT_STATUSES[number];
@@ -8,11 +8,15 @@ export type AssignmentStatus = typeof ASSIGNMENT_STATUSES[number];
 export const ASSIGMENT_PAID = ["paid", "unpaid", "refund"];
 export type AssignmentPaid = typeof ASSIGMENT_PAID[number];
 
+export const ASSIGMENT_PAID_METHOD = ["cash", "card", "transfer", "gift_certificate", "other"];
+export type AssignmentPaidMethod = typeof  ASSIGMENT_PAID_METHOD[number];
+
 export interface AssignmentAttributes {
   id: number;
   chat_id?: string | null;
   branch_id: number;
   organization_id: number;
+  gift_certificate_id: number | null;
   client_id: number;
   client_snapshot: ClientInfo;
   service_id: number;
@@ -32,7 +36,7 @@ export interface AssignmentAttributes {
   discount?: number | null;
   final_price: number;
   total_duration: number;
-  payment_method?: string | null;
+  payment_method?: PaymentMethod | null;
   paid: AssignmentPaid;
   createdAt?: Date;
   updatedAt?: Date;
@@ -51,6 +55,7 @@ export type AssignmentCreationAttributes = Optional<
   | "notes"
   | "payment_method"
   | "chat_id"
+  | "gift_certificate_id"
 >;
 
 export class Assignment
@@ -60,6 +65,7 @@ export class Assignment
   declare id: number;
   declare chat_id: string | null;
   declare branch_id: number;
+  declare gift_certificate_id: number | null;
   declare organization_id: number;
   declare client_id: number;
   declare client_snapshot: ClientInfo;
@@ -80,7 +86,7 @@ export class Assignment
   declare discount: number | null;
   declare final_price: number;
   declare total_duration: number;
-  declare payment_method?: string | null;
+  declare payment_method?: PaymentMethod | null;
   declare paid: AssignmentPaid;
   declare readonly createdAt: Date;
   declare readonly updatedAt: Date;
@@ -100,6 +106,7 @@ Assignment.init(
     service_id: { type: DataTypes.INTEGER, allowNull: false },
     branch_id: { type: DataTypes.INTEGER, allowNull: false },
     chat_id: { type: DataTypes.STRING, allowNull: true },
+    gift_certificate_id: { type: DataTypes.INTEGER, allowNull: true },
     manager_snapshot: { type: DataTypes.JSONB, allowNull: true },
     employee_snapshot: { type: DataTypes.JSONB, allowNull: true },
     service_snapshot: { type: DataTypes.JSONB, allowNull: false },
@@ -119,9 +126,16 @@ Assignment.init(
     notes: { type: DataTypes.STRING, allowNull: true },
     source: { type: DataTypes.STRING, allowNull: false },
     discount: { type: DataTypes.DECIMAL(5, 2), allowNull: true, defaultValue: 0 },
-    final_price: { type: DataTypes.INTEGER, allowNull: false },
+    final_price: {
+      type: DataTypes.BIGINT,
+      allowNull: false,
+      get() {
+        const rawValue = this.getDataValue("final_price");
+        return rawValue === null ? null : Number(rawValue);
+      },
+    },
     total_duration: { type: DataTypes.INTEGER, allowNull: false },
-    payment_method: { type: DataTypes.STRING, allowNull: true },
+    payment_method: { type: DataTypes.JSONB, allowNull: true },
     paid: {
       type: DataTypes.ENUM(...ASSIGMENT_PAID),
       defaultValue: "unpaid",

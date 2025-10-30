@@ -1,9 +1,9 @@
 import type { NextFunction, Request, Response } from "express";
 import { Op, type WhereOptions } from "sequelize";
 import Assignment, {
-  ASSIGMENT_PAID,
+  ASSIGMENT_PAID, ASSIGMENT_PAID_METHOD,
   ASSIGNMENT_STATUSES,
-  type AssignmentAttributes, type AssignmentPaid,
+  type AssignmentAttributes, type AssignmentPaid, type AssignmentPaidMethod,
   type AssignmentStatus,
 } from "./Assignment.ts";
 import Branch from "../organization/Branch.ts";
@@ -17,6 +17,7 @@ import { checkTimeOverlap } from "./checkTimeOverlap.ts";
 import type { ServiceInfo, UserInfo } from "../../types";
 import User from "../user/User.ts";
 import axios from "axios";
+import { octoApi } from "../../constants/urls.ts";
 
 export const getListAssignments = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -236,6 +237,7 @@ export const editAssignment = async (req: Request, res: Response, next: NextFunc
       discount,
       paid,
       payment_method,
+      gift_certificate_id
     } = req.body;
 
     if (status && !ASSIGNMENT_STATUSES.includes(status as AssignmentStatus)) {
@@ -327,7 +329,7 @@ export const editAssignment = async (req: Request, res: Response, next: NextFunc
       }
     }
 
-    const discountValue = discount ?? assignment.discount ?? 0;
+    let discountValue = discount ?? assignment.discount ?? 0;
     updates.discount = discountValue;
     updates.final_price = Math.max(0, Math.round(totalPrice - (totalPrice * discountValue) / 100));
     updates.total_duration = totalDuration;
@@ -369,9 +371,14 @@ export const editAssignment = async (req: Request, res: Response, next: NextFunc
         return res.status(400).json({ error: "Invalid paid value" });
       }
       updates.paid = paid;
-      if (paid && paid !=="refund" && !payment_method) {
+      if (paid !=="refund" && !payment_method && !ASSIGMENT_PAID_METHOD.includes(payment_method.type as AssignmentPaidMethod)) {
         return res.status(400).json({ error: "Payment method required when marking as paid" });
       }
+
+      if (payment_method === "gift_certificate" && !gift_certificate_id) {
+        return res.status(400).json({ error: "Please provide the gift certificate ID" });
+      }
+
       updates.payment_method = payment_method;
     }
 
@@ -404,10 +411,11 @@ export const editAssignment = async (req: Request, res: Response, next: NextFunc
       }
     }
 
-    if (paid === "paid" && status === "completed") {
+    if (paid === "paid") {
       const client = assignment.client_snapshot;
       const employee = assignment.employee_snapshot;
       const managerSnap = updates.manager_snapshot;
+      let certificate;
 
       if (
         !updates.payment_method ||
@@ -418,6 +426,25 @@ export const editAssignment = async (req: Request, res: Response, next: NextFunc
           .status(400)
           .send({ error: "Missing required fields for accounting" });
       }
+
+      if (payment_method === "gift_certificate") {
+        // if (!gift_certificate_id) {
+        //   return res.status(400).send({ error: "Invalid gift certificate id" });
+        // }
+
+        const res = await axios.post(octoApi + "giftCertificate/" + gift_certificate_id, {
+          headers: {
+            authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        });
+
+        console.log(res.data);
+      }
+
+      updates.discount = discountValue;
+      updates.final_price = Math.max(0, Math.round(totalPrice - (totalPrice * discountValue) / 100));
+      updates.total_duration = totalDuration;
 
       const newAccounting = {
         branch_id: assignment.branch_id,
@@ -439,26 +466,39 @@ export const editAssignment = async (req: Request, res: Response, next: NextFunc
         timezone: assignment.timezone,
         amount: updates.final_price,
         status: "success",
+        // gift_certificate_id,
+        // gift_certificate_snapshot
       }
 
-      try {
-        await axios.post("http://localhost:3000/accounting?branch_id=" + assignment.branch_id, {...newAccounting}, {
+        await axios.post(octoApi +"accounting?branch_id=" + assignment.branch_id, {...newAccounting}, {
           headers: {
             authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
         });
-      } catch (e) {
-        return res.status(400).send({ error: e });
-      }
+      await assignment.update(updates);
+      return res.json({
+        message: `Assignment updated successfully. Created accounting"}`,
+        assignment
+      });
     }
+
     await assignment.update(updates);
     return res.json({
-      message: `Assignment updated successfully ${assignment.paid === "paid" ? "Created accounting" : ""}`,
+      message: `Assignment updated successfully`,
       assignment
     });
   } catch (e) {
-    console.error(e);
+    if (axios.isAxiosError(e)) {
+      return res.status(e.response?.status || 500).json({
+        success: false,
+        message: e.response?.data?.message || e.message,
+        data: e.response?.data || null,
+        url: e.config?.url,
+        method: e.config?.method,
+      });
+    }
+    console.error("Assigment create error", e);
     next(e);
   }
 }
