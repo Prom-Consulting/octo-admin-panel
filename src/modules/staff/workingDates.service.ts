@@ -19,6 +19,8 @@ WorkingDatesServiceRoute.get("/", async (req: Request, res:Response, next: NextF
       where.staff_id = Number(staffId);
     }
 
+    if (!branchId) return res.status(404).send("branchId query is required");
+
     const branch = await Branch.findByPk(Number(branchId));
 
     if (!branch) {
@@ -35,6 +37,7 @@ WorkingDatesServiceRoute.get("/", async (req: Request, res:Response, next: NextF
     const schedule = await WorkingDates.findAll({ where });
     return res.send(schedule);
   } catch (e) {
+    console.log("Get working dates error", e);
     next(e);
   }
 });

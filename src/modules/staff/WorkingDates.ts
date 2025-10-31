@@ -62,10 +62,9 @@ WorkingDates.init(
 OrganizationStaff.hasMany(WorkingDates, {
   foreignKey: "staff_id",
   as: "working_dates",
-  onDelete: "CASCADE", // если сотрудника удалить — удалить и его график
+  onDelete: "CASCADE",
 });
 
-// Один рабочий день принадлежит одному сотруднику
 WorkingDates.belongsTo(OrganizationStaff, {
   foreignKey: "staff_id",
   as: "staff",
@@ -76,7 +75,6 @@ Branch.hasMany(WorkingDates, {
   as: "working_dates",
 });
 
-// working_dates -> branch
 WorkingDates.belongsTo(Branch, {
   foreignKey: "branch_id",
   as: "branch",
