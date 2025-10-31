@@ -288,7 +288,7 @@ OrganizationStaffRouter.post(
 // Обновление сотрудника (только для manager)
 OrganizationStaffRouter.put(
   "/:id",
-  // authorizeRoles("manager"),
+  authorizeRoles("manager", "owner"),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { id } = req.params;
@@ -321,12 +321,12 @@ OrganizationStaffRouter.put(
       }
 
       // Проверка доступа к организации
-      if (req.user && staff.organization.id !== req.user.organizationId) {
-        return res.status(403).json({
-          success: false,
-          message: "Access denied. Staff member belongs to another organization",
-        });
-      }
+      // if (req.user && staff.organization.id !== req.user.organizationId) {
+      //   return res.status(403).json({
+      //     success: false,
+      //     message: "Access denied. Staff member belongs to another organization",
+      //   });
+      // }
 
       // Валидация organization если он указан
       const targetOrganizationId = organization?.id || staff.organization.id;
@@ -448,12 +448,12 @@ OrganizationStaffRouter.patch(
       }
 
       // Проверка организации
-      if (req.user && staff.organization.id !== req.user.organizationId) {
-        return res.status(403).json({
-          success: false,
-          message: "Access denied",
-        });
-      }
+      // if (req.user && staff.organization.id !== req.user.organizationId) {
+      //   return res.status(403).json({
+      //     success: false,
+      //     message: "Access denied",
+      //   });
+      // }
 
       // Обычные сотрудники не могут изменять роль, организацию, филиалы
       if (!isManager && (updates.role || updates.organization || updates.branches)) {
@@ -534,7 +534,7 @@ OrganizationStaffRouter.patch(
 // Удаление сотрудника (только для manager)
 OrganizationStaffRouter.delete(
   "/:id",
-  authorizeRoles("manager"),
+  authorizeRoles("manager", "owner"),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { id } = req.params;
@@ -549,12 +549,12 @@ OrganizationStaffRouter.delete(
       }
 
       // Проверка организации
-      if (req.user && staff.organization.id !== req.user.organizationId) {
-        return res.status(403).json({
-          success: false,
-          message: "Access denied",
-        });
-      }
+      // if (req.user && staff.organization.id !== req.user.organizationId) {
+      //   return res.status(403).json({
+      //     success: false,
+      //     message: "Access denied",
+      //   });
+      // }
 
       await staff.destroy();
 
@@ -572,7 +572,7 @@ OrganizationStaffRouter.delete(
 // Активация и деактивация сотрудника (только для manager)
 OrganizationStaffRouter.patch(
   "/:id/de-activate",
-  authorizeRoles("manager"),
+  authorizeRoles("manager", "owner"),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { id } = req.params;
@@ -587,12 +587,12 @@ OrganizationStaffRouter.patch(
       }
 
       // Проверка организации
-      if (req.user && staff.organization.id !== req.user.organizationId) {
-        return res.status(403).json({
-          success: false,
-          message: "Access denied",
-        });
-      }
+      // if (req.user && staff.organization.id !== req.user.organizationId) {
+      //   return res.status(403).json({
+      //     success: false,
+      //     message: "Access denied",
+      //   });
+      // }
 
       await staff.update({ is_active: !staff.is_active });
 
@@ -615,7 +615,7 @@ OrganizationStaffRouter.patch(
 // Добавление сотрудника к филиалу (только для manager)
 OrganizationStaffRouter.post(
   "/:id/branches",
-  authorizeRoles("manager"),
+  authorizeRoles("manager", "owner"),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { id } = req.params;
@@ -640,12 +640,12 @@ OrganizationStaffRouter.post(
       }
 
       // Проверка организации
-      if (req.user && staff.organization.id !== req.user.organizationId) {
-        return res.status(403).json({
-          success: false,
-          message: "Access denied",
-        });
-      }
+      // if (req.user && staff.organization.id !== req.user.organizationId) {
+      //   return res.status(403).json({
+      //     success: false,
+      //     message: "Access denied",
+      //   });
+      // }
 
       // Проверяем, не добавлен ли уже этот филиал
       const branchExists = staff.branches.some((b) => b.id === branchId);
@@ -704,7 +704,7 @@ OrganizationStaffRouter.post(
 // Удаление сотрудника из филиала (только для manager)
 OrganizationStaffRouter.delete(
   "/:id/branches/:branchId",
-  authorizeRoles("manager"),
+  authorizeRoles("manager", "owner"),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { id, branchId } = req.params;
@@ -753,12 +753,12 @@ OrganizationStaffRouter.delete(
       }
 
       // Проверка организации
-      if (req.user && staff.organization.id !== req.user.organizationId) {
-        return res.status(403).json({
-          success: false,
-          message: "Access denied",
-        });
-      }
+      // if (req.user && staff.organization.id !== req.user.organizationId) {
+      //   return res.status(403).json({
+      //     success: false,
+      //     message: "Access denied",
+      //   });
+      // }
 
       // Проверяем, что это не последний филиал
       if (staff.branches.length === 1) {

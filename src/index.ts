@@ -15,6 +15,7 @@ import AssignmentsServiceRoute from "./modules/assigments/assignment.service.ts"
 import OrganizationStaffAuthorizationRouter from "./modules/staff/organizationStaffAuthorization.ts";
 import OrganizationStaffRouter from "./modules/staff/organizationStaff.service.ts";
 import AssignmentsBookingServiceRoute from "./modules/booking/assignmentsBooking.service.ts";
+import WorkingDatesServiceRoute from "./modules/staff/workingDates.service.ts";
 
 config();
 
@@ -38,6 +39,7 @@ app.use("/organizations", OrganizationServiceRoute);
 app.use("/assignments", AssignmentsServiceRoute);
 app.use("/staffAuthorization", OrganizationStaffAuthorizationRouter);
 app.use("/staff", OrganizationStaffRouter);
+app.use("/working-dates", WorkingDatesServiceRoute)
 
 //superadmin routes
 app.use("/admin", AdminServiceRoute);
