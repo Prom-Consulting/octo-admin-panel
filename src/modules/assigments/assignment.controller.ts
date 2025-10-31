@@ -1,9 +1,12 @@
 import type { NextFunction, Request, Response } from "express";
 import { Op, type WhereOptions } from "sequelize";
 import Assignment, {
-  ASSIGMENT_PAID, ASSIGMENT_PAID_METHOD,
+  ASSIGMENT_PAID,
+  ASSIGMENT_PAID_METHOD,
   ASSIGNMENT_STATUSES,
-  type AssignmentAttributes, type AssignmentPaid, type AssignmentPaidMethod,
+  type AssignmentAttributes,
+  type AssignmentPaid,
+  type AssignmentPaidMethod,
   type AssignmentStatus,
 } from "./Assignment.ts";
 import Branch from "../organization/Branch.ts";
@@ -14,12 +17,16 @@ import OrganizationStaff from "../staff/OrganizationStaff.ts";
 import transformPrices from "../../utils /transformPrices.ts";
 import { DateTime } from "luxon";
 import { checkTimeOverlap } from "./checkTimeOverlap.ts";
-import type { ServiceInfo, UserInfo } from "../../types";
+import type { CertificateInfo, ServiceInfo, UserInfo } from "../../types";
 import User from "../user/User.ts";
 import axios from "axios";
 import { octoApi } from "../../constants/urls.ts";
 
-export const getListAssignments = async (req: Request, res: Response, next: NextFunction) => {
+export const getListAssignments = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     const { employee_id, branch_id, client_id } = req.query;
     const date = req.query.date as string;
@@ -48,18 +55,22 @@ export const getListAssignments = async (req: Request, res: Response, next: Next
     const assignments = await Assignment.findAll({ where });
     res.send(assignments);
   } catch (e) {
-    console.log( "Error get list assignment", e);
+    console.log("Error get list assignment", e);
     next(e);
   }
-}
+};
 
-export const getAssignmentById = async (req: Request, res: Response, next: NextFunction) => {
+export const getAssignmentById = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     const { id } = req.params;
     const assignment = await Assignment.findByPk(id);
 
     if (!assignment) {
-      return res.status(404).send({error: "No Assignment found with this id"});
+      return res.status(404).send({ error: "No Assignment found with this id" });
     }
 
     res.send(assignment);
@@ -67,9 +78,13 @@ export const getAssignmentById = async (req: Request, res: Response, next: NextF
     console.log("Error get assignment by id", e);
     next(e);
   }
-}
+};
 
-export const createAssignment = async (req: Request, res: Response, next: NextFunction) => {
+export const createAssignment = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     const {
       organization_id,
@@ -132,9 +147,15 @@ export const createAssignment = async (req: Request, res: Response, next: NextFu
 
     const totalDuration =
       service.duration +
-      normalizedAdditional.reduce((sum: number, s: ServiceInfo) => sum + s.duration, 0);
+      normalizedAdditional.reduce(
+        (sum: number, s: ServiceInfo) => sum + s.duration,
+        0
+      );
 
-    const finalPrice = Math.max(0, Math.round(totalPrice - (totalPrice * discount) / 100));
+    const finalPrice = Math.max(
+      0,
+      Math.round(totalPrice - (totalPrice * discount) / 100)
+    );
     const startDateTime = DateTime.fromISO(`${assignment_date}T${start_time}`, {
       zone: branch.timezone,
     });
@@ -154,7 +175,7 @@ export const createAssignment = async (req: Request, res: Response, next: NextFu
     if (overlap) {
       return res.status(409).json({
         error: "The employee is already booked at this time",
-        details: { startTimeUTC, endTimeUTC, timezone:branch.timezone },
+        details: { startTimeUTC, endTimeUTC, timezone: branch.timezone },
       });
     }
 
@@ -182,14 +203,15 @@ export const createAssignment = async (req: Request, res: Response, next: NextFu
         price: normalizedService.price,
         duration: normalizedService.duration,
       },
-      additional_services: additional_services && normalizedAdditional.length > 0
-        ? normalizedAdditional.map((s: ServiceInfo) => ({
-          id: s.id,
-          name: s.name,
-          price: s.price,
-          duration: s.duration,
-        }))
-        : null,
+      additional_services:
+        additional_services && normalizedAdditional.length > 0
+          ? normalizedAdditional.map((s: ServiceInfo) => ({
+              id: s.id,
+              name: s.name,
+              price: s.price,
+              duration: s.duration,
+            }))
+          : null,
       status: "new",
       notes: notes || null,
       source,
@@ -210,9 +232,13 @@ export const createAssignment = async (req: Request, res: Response, next: NextFu
     console.error("Error creating assignment:", error);
     next(error);
   }
-}
+};
 
-export const editAssignment = async (req: Request, res: Response, next: NextFunction) => {
+export const editAssignment = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     const { id } = req.params;
     const user = req.user!;
@@ -237,7 +263,7 @@ export const editAssignment = async (req: Request, res: Response, next: NextFunc
       discount,
       paid,
       payment_method,
-      gift_certificate_id
+      gift_certificate_id,
     } = req.body;
 
     if (status && !ASSIGNMENT_STATUSES.includes(status as AssignmentStatus)) {
@@ -263,7 +289,10 @@ export const editAssignment = async (req: Request, res: Response, next: NextFunc
     let totalDuration = 0;
 
     if (service) {
-      const normalizedService = { ...service, price: transformPrices(service.price) };
+      const normalizedService = {
+        ...service,
+        price: transformPrices(service.price),
+      };
       updates.service_id = service.id;
       updates.service_snapshot = {
         name: service.name,
@@ -279,20 +308,28 @@ export const editAssignment = async (req: Request, res: Response, next: NextFunc
 
     const currentDate = assignment_date
       ? DateTime.fromISO(assignment_date, { zone: assignment.timezone })
-      : DateTime.fromJSDate(assignment.assignment_date, { zone: "utc" }).setZone(assignment.timezone).startOf("day");
+      : DateTime.fromJSDate(assignment.assignment_date, { zone: "utc" })
+          .setZone(assignment.timezone)
+          .startOf("day");
 
     const start = start_time ?? assignment.start_time;
     const end = end_time ?? assignment.end_time;
 
-    const startDateTime = DateTime.fromISO(`${currentDate.toISODate()}T${start}`, { zone: assignment.timezone });
-    let endDateTime = DateTime.fromISO(`${currentDate.toISODate()}T${end}`, { zone: assignment.timezone });
+    const startDateTime = DateTime.fromISO(`${currentDate.toISODate()}T${start}`, {
+      zone: assignment.timezone,
+    });
+    let endDateTime = DateTime.fromISO(`${currentDate.toISODate()}T${end}`, {
+      zone: assignment.timezone,
+    });
 
     if (!end_time) {
       endDateTime = startDateTime.plus({ minutes: totalDuration });
     }
 
     if (endDateTime <= startDateTime) {
-      return res.status(400).json({ error: "End time cannot be earlier than start time" });
+      return res
+        .status(400)
+        .json({ error: "End time cannot be earlier than start time" });
     }
 
     if (assignment_date) updates.assignment_date = startDateTime.toUTC().toJSDate();
@@ -331,7 +368,10 @@ export const editAssignment = async (req: Request, res: Response, next: NextFunc
 
     let discountValue = discount ?? assignment.discount ?? 0;
     updates.discount = discountValue;
-    updates.final_price = Math.max(0, Math.round(totalPrice - (totalPrice * discountValue) / 100));
+    updates.final_price = Math.max(
+      0,
+      Math.round(totalPrice - (totalPrice * discountValue) / 100)
+    );
     updates.total_duration = totalDuration;
 
     let issued_by: UserInfo;
@@ -371,19 +411,21 @@ export const editAssignment = async (req: Request, res: Response, next: NextFunc
         return res.status(400).json({ error: "Invalid paid value" });
       }
       updates.paid = paid;
-      if (paid !=="refund" && !payment_method && !ASSIGMENT_PAID_METHOD.includes(payment_method.type as AssignmentPaidMethod)) {
-        return res.status(400).json({ error: "Payment method required when marking as paid" });
+      if (
+        paid !== "refund" &&
+        !payment_method &&
+        !ASSIGMENT_PAID_METHOD.includes(payment_method.type as AssignmentPaidMethod)
+      ) {
+        return res
+          .status(400)
+          .json({ error: "Payment method required when marking as paid" });
       }
 
       if (payment_method === "gift_certificate" && !gift_certificate_id) {
-        return res.status(400).json({ error: "Please provide the gift certificate ID" });
+        return res
+          .status(400)
+          .json({ error: "Please provide the gift certificate ID" });
       }
-
-      updates.payment_method = payment_method;
-    }
-
-    if (Object.keys(updates).length === 0) {
-      return res.status(400).json({ error: "No fields to update" });
     }
 
     if (paid === "refund") {
@@ -411,14 +453,17 @@ export const editAssignment = async (req: Request, res: Response, next: NextFunc
       }
     }
 
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({ error: "No fields to update" });
+    }
+
     if (paid === "paid") {
       const client = assignment.client_snapshot;
       const employee = assignment.employee_snapshot;
       const managerSnap = updates.manager_snapshot;
-      let certificate;
 
       if (
-        !updates.payment_method ||
+        payment_method.lenth <= 0 ||
         !assignment.total_duration ||
         !updates.final_price
       ) {
@@ -427,24 +472,69 @@ export const editAssignment = async (req: Request, res: Response, next: NextFunc
           .send({ error: "Missing required fields for accounting" });
       }
 
-      if (payment_method === "gift_certificate") {
-        // if (!gift_certificate_id) {
-        //   return res.status(400).send({ error: "Invalid gift certificate id" });
-        // }
+      let discountValue = discount ?? assignment.discount ?? 0;
+      let giftCertificateSnapshot: CertificateInfo | null = null;
+      let giftCertificateId: number | null = null;
 
-        const res = await axios.post(octoApi + "giftCertificate/" + gift_certificate_id, {
-          headers: {
-            authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        });
+      let totalPaid = 0;
 
-        console.log(res.data);
+      if (payment_method.length > 0) {
+        for (const method of payment_method) {
+          if (method.type === "gift_certificate") {
+            if (!gift_certificate_id) {
+              return res
+                .status(400)
+                .send({ error: "Gift certificate ID is required" });
+            }
+
+            const { data: certificateData } = await axios.get(
+              `${octoApi}gift-certificates/${gift_certificate_id}`,
+              {
+                headers: {
+                  authorization: `Bearer ${token}`,
+                  "Content-Type": "application/json",
+                },
+              }
+            );
+
+            const certificate = certificateData;
+
+            const nowUtc = DateTime.now().toUTC();
+            const expiryUtc = DateTime.fromJSDate(certificate.expiry_date).toUTC();
+
+            if (nowUtc > expiryUtc) {
+              return res.status(400).send({ error: "Gift certificate has expired" });
+            }
+
+            discountValue = certificate.discount;
+
+            giftCertificateSnapshot = {
+              certificate_number: certificate.certificate_number,
+              amount: certificate.amount,
+              discount: certificate.discount,
+              expiry_date: certificate.expiry_date,
+            };
+            giftCertificateId = certificate.id;
+
+            method.amount = certificate.amount;
+            console.log("certificate amount", method.amount);
+          } else {
+              method.amount = transformPrices(method.amount);
+          }
+          if (method.amount) totalPaid += method.amount;
+          if (!method.name) method.name = null;
+          updates.payment_method = {methods: [...payment_method], total: totalPaid };
+        }
       }
 
+      const finalPrice = Math.max(
+        0,
+        Math.round(totalPrice - (totalPrice * discountValue) / 100)
+      );
+
       updates.discount = discountValue;
-      updates.final_price = Math.max(0, Math.round(totalPrice - (totalPrice * discountValue) / 100));
-      updates.total_duration = totalDuration;
+      updates.final_price = finalPrice;
+      updates.total_duration = assignment.total_duration;
 
       const newAccounting = {
         branch_id: assignment.branch_id,
@@ -460,33 +550,39 @@ export const editAssignment = async (req: Request, res: Response, next: NextFunc
         manager_snapshot: managerSnap,
         assignment_id: assignment.id,
         duration: assignment.total_duration,
-        payment_method: updates.payment_method,
-        discount: updates.discount || assignment.discount || 0,
+        payment_method: updates.payment_method?.methods,
+        discount: discountValue,
         date: DateTime.now().setZone(assignment.timezone).toUTC().toJSDate(),
         timezone: assignment.timezone,
-        amount: updates.final_price,
+        amount: finalPrice,
         status: "success",
-        // gift_certificate_id,
-        // gift_certificate_snapshot
-      }
+        gift_certificate_id: giftCertificateId,
+        gift_certificate_snapshot: giftCertificateSnapshot,
+      };
 
-        await axios.post(octoApi +"accounting?branch_id=" + assignment.branch_id, {...newAccounting}, {
+      await axios.post(
+        `${octoApi}accounting?branch_id=${assignment.branch_id}`,
+        newAccounting,
+        {
           headers: {
             authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
-        });
+        }
+      );
+
       await assignment.update(updates);
+
       return res.json({
-        message: `Assignment updated successfully. Created accounting"}`,
-        assignment
+        message: `Assignment updated successfully. Created accounting`,
+        assignment,
       });
     }
 
     await assignment.update(updates);
     return res.json({
       message: `Assignment updated successfully`,
-      assignment
+      assignment,
     });
   } catch (e) {
     if (axios.isAxiosError(e)) {
@@ -498,26 +594,31 @@ export const editAssignment = async (req: Request, res: Response, next: NextFunc
         method: e.config?.method,
       });
     }
-    console.error("Assigment create error", e);
+    console.error("Assigment edit error", e);
     next(e);
   }
-}
+};
 
-export const deleteAssignment = async (req: Request, res: Response, next: NextFunction) => {
+export const deleteAssignment = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     const { id } = req.params;
     const assignment = await Assignment.findByPk(id);
 
     if (!assignment) {
-      return res.status(400).json({error: "Assignment not found"});
+      return res.status(400).json({ error: "Assignment not found" });
     }
 
     if (assignment.paid === "paid") {
-      return res.status(400).json({error: "You cannot delete a paid assignment."});
+      return res.status(400).json({ error: "You cannot delete a paid assignment." });
     }
 
     await assignment.destroy();
   } catch (e) {
+    console.log("Delete assigment error", e);
     next(e);
   }
-}
+};
