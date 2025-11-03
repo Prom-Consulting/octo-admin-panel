@@ -5,7 +5,6 @@ import Organization from "./Organization.ts";
 export interface BranchAttributes {
   id: number;
   organization_id: number;
-  user_id: number;
   name: string;
   phone: string;
   address: string;
@@ -22,7 +21,6 @@ export type BranchCreationAttributes = Optional<BranchAttributes,
 export class Branch extends
   Model<BranchAttributes, BranchCreationAttributes> implements BranchAttributes {
   declare id: number;
-  declare user_id: number;
   declare organization_id: number;
   declare name: string;
   declare phone: string;
@@ -39,7 +37,6 @@ Branch.init({
       autoIncrement: true,
       primaryKey: true,
     },
-    user_id: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 3 },
     organization_id: { type: DataTypes.INTEGER, allowNull: false },
     name: { type: DataTypes.STRING, allowNull: false },
     phone: { type: DataTypes.STRING, allowNull: false },
