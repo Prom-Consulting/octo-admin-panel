@@ -316,7 +316,7 @@ export default OrganizationStaffAuthorizationRouter;
 
 /**
  * @swagger
- * /auth/login:
+ * /staffAuthorization/auth/login:
  *   post:
  *     summary: Авторизация сотрудника (Login)
  *     tags: [OrganizationStaffAuth]
@@ -363,7 +363,7 @@ export default OrganizationStaffAuthorizationRouter;
 
 /**
  * @swagger
- * /auth/logout:
+ * /staffAuthorization/auth/logout:
  *   post:
  *     summary: Выход сотрудника (Logout)
  *     tags: [OrganizationStaffAuth]
@@ -387,7 +387,7 @@ export default OrganizationStaffAuthorizationRouter;
 
 /**
  * @swagger
- * /auth/refresh:
+ * /staffAuthorization/auth/refresh:
  *   post:
  *     summary: Обновление access токена (Refresh Token)
  *     tags: [OrganizationStaffAuth]
@@ -421,7 +421,7 @@ export default OrganizationStaffAuthorizationRouter;
 
 /**
  * @swagger
- * /auth/me:
+ * /staffAuthorization/auth/me:
  *   get:
  *     summary: Получение данных текущего пользователя
  *     tags: [OrganizationStaffAuth]
@@ -447,7 +447,7 @@ export default OrganizationStaffAuthorizationRouter;
 
 /**
  * @swagger
- * /auth/change-password:
+ * /staffAuthorization/auth/change-password:
  *   post:
  *     summary: Смена пароля сотрудника
  *     tags: [OrganizationStaffAuth]
