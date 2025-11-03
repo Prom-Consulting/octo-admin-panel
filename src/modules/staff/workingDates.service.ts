@@ -98,6 +98,7 @@ WorkingDatesServiceRoute.post("/:staffId", async (req: Request, res: Response, n
 
       res.send(workingDate);
     } catch (e) {
+      console.log("Create working dates error",e);
       next(e);
     }
   }
@@ -165,6 +166,7 @@ WorkingDatesServiceRoute.patch("/:id", async (req: Request, res: Response, next:
       await workingDate.update(updates);
       res.send(workingDate);
     } catch (e) {
+      console.log("Edit working dates error", e);
       next(e);
     }
   }
@@ -187,6 +189,7 @@ WorkingDatesServiceRoute.delete("/:id", async (req: Request, res:Response, next:
     await workDate.destroy();
     res.send({message: "Work date deleted"});
   } catch (e) {
+    console.log("Delete working dates error", e);
     next(e);
   }
 });

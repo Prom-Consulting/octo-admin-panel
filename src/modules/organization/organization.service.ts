@@ -24,6 +24,7 @@ OrganizationServiceRoute.get("/", async (req, res, next) => {
     const organizationList = await Organization.findAll({ where });
     res.send(organizationList);
   } catch (e) {
+    console.log("Get organization error", e);
     next(e);
   }
 });
@@ -39,6 +40,7 @@ OrganizationServiceRoute.get("/:id", async (req, res, next) => {
 
     res.send(organization);
   } catch (e) {
+    console.log("Get by id organization error", e);
     next(e);
   }
 });
@@ -87,7 +89,7 @@ OrganizationServiceRoute.post("/", async (req, res, next) => {
       });
     }
   } catch (e) {
-    console.log(e);
+    console.log("Create organization error",e);
     next(e);
   }
 });
@@ -111,6 +113,7 @@ OrganizationServiceRoute.patch("/:id", async (req, res, next) => {
 
     res.send(organization);
   } catch (e) {
+    console.log("Edit organization error", e);
     next(e);
   }
 });
