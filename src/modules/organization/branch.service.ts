@@ -21,7 +21,7 @@ BranchServiceRoute.get("/", async (req, res, next) => {
     const listBranches = await Branch.findAll({ where });
     return res.send(listBranches);
   } catch (e) {
-    console.log(e);
+    console.log("Get branch error",e);
     next(e);
   }
 });
@@ -36,7 +36,7 @@ BranchServiceRoute.get("/:id", async (req, res, next) => {
 
     return res.send(branch);
   } catch (e) {
-    console.log("error: ------------------------------------------------------------------", e);
+    console.log("Get by id branch error", e);
     next(e);
   }
 });
@@ -101,6 +101,7 @@ BranchServiceRoute.post("/", async (req, res, next) => {
     });
     return res.send({ message: "Branch created successfully.", newBranch });
   } catch (e) {
+    console.log("Create branch error", e);
     next(e);
   }
 });
@@ -123,6 +124,7 @@ BranchServiceRoute.patch("/:id", async (req, res, next) => {
 
     return res.send({ message: "Branch updated successfully", branch });
   } catch (e) {
+    console.log("Patch branch error", e);
     next(e);
   }
 });
@@ -144,6 +146,7 @@ BranchServiceRoute.patch("/:id/deactivate", async (req, res, next) => {
     await branch.save();
     return res.send({ message: `You have deactivated the branch: ${branch.name}` });
   } catch (e) {
+    console.log("Patch branch deactivate error", e);
     next(e);
   }
 });

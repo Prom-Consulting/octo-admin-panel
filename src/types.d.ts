@@ -53,9 +53,17 @@ export interface OrganizationInfo {
 export interface PaymentPart {
   type: AssignmentPaidMethod;
   amount: number;
+  name: string;
 }
 
 export interface PaymentMethod {
   methods: PaymentPart[];
   total: number;
+}
+
+export interface CertificateInfo {
+  certificate_number: string;
+  amount: number;
+  discount: number;
+  expiry_date: Date;
 }

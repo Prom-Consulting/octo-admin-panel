@@ -44,7 +44,8 @@ WorkingDatesServiceRoute.get("/", async (req: Request, res:Response, next: NextF
 
 WorkingDatesServiceRoute.post("/:staffId", async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { staffId, branchId } = req.params;
+      const { staffId } = req.params;
+      const { branchId } = req.query;
       const { workDate, startTime, endTime } = req.body;
 
       if (!staffId) {
@@ -98,6 +99,7 @@ WorkingDatesServiceRoute.post("/:staffId", async (req: Request, res: Response, n
 
       res.send(workingDate);
     } catch (e) {
+      console.log("Create working dates error",e);
       next(e);
     }
   }
@@ -165,6 +167,7 @@ WorkingDatesServiceRoute.patch("/:id", async (req: Request, res: Response, next:
       await workingDate.update(updates);
       res.send(workingDate);
     } catch (e) {
+      console.log("Edit working dates error", e);
       next(e);
     }
   }
@@ -187,6 +190,7 @@ WorkingDatesServiceRoute.delete("/:id", async (req: Request, res:Response, next:
     await workDate.destroy();
     res.send({message: "Work date deleted"});
   } catch (e) {
+    console.log("Delete working dates error", e);
     next(e);
   }
 });
