@@ -1,8 +1,8 @@
 import type { AssignmentPaidMethod } from "./modules/assigments/Assignment.ts";
 
 export interface UserToCreate {
-  first_name: string;
-  last_name?: string;
+  firstname: string;
+  lastname?: string;
   email: string;
   isActive: boolean;
 } // toCreateOwnerUser

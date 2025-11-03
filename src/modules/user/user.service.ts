@@ -99,15 +99,10 @@ UserServiceRoute.post(
       });
     } catch (e) {
       console.error("Login error:", e);
-      return res.status(500).json({
-        success: false,
-        message: "Internal server error",
-      });
+     next(e);
     }
   }
 );
-
-//можно менять пароль и убрать email isActive
 
 interface UserToChange extends UserToCreate {
   password: string;
@@ -120,9 +115,9 @@ UserServiceRoute.put(
       const userId = req.params.id;
       const userData: UserToChange = req.body;
 
-      const { first_name, last_name, password, email } = userData;
+      const { firstname, lastname, password, email } = userData;
 
-      if (!first_name || !last_name) {
+      if (!firstname || !lastname) {
         return res.status(422).send({
           error: "Inputs required",
         });
@@ -152,8 +147,8 @@ UserServiceRoute.put(
       const hashedPassword = await bcrypt.hash(password, 10);
 
       // обновляем все поля
-      if (last_name) user.last_name = last_name;
-      if (first_name) user.first_name = first_name;
+      if (lastname) user.last_name = lastname;
+      if (firstname) user.first_name = firstname;
       user.password = hashedPassword;
 
       await user.save();
@@ -280,9 +275,9 @@ export default UserServiceRoute;
  *           schema:
  *             type: object
  *             properties:
- *               first_name:
+ *               firstname:
  *                 type: string
- *               last_name:
+ *               lastname:
  *                 type: string
  *               password:
  *                 type: string
@@ -335,9 +330,9 @@ export default UserServiceRoute;
  *       properties:
  *         id:
  *           type: integer
- *         first_name:
+ *         firstname:
  *           type: string
- *         last_name:
+ *         lastname:
  *           type: string
  *         email:
  *           type: string

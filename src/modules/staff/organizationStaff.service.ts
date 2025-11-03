@@ -148,8 +148,8 @@ OrganizationStaffRouter.post(
       customRole,
       specialty,
       description,
-      is_active = true,
-      photo_url,
+      isActive = true,
+      photoUrl,
     } = req.body;
 
     try {
@@ -223,8 +223,8 @@ OrganizationStaffRouter.post(
         customRole,
         specialty,
         description,
-        is_active,
-        photo_url,
+        is_active: isActive,
+        photo_url: photoUrl,
       });
 
       // Возвращаем сотрудника без пароля
@@ -261,8 +261,8 @@ OrganizationStaffRouter.put(
         customRole,
         specialty,
         description,
-        is_active,
-        photo_url,
+        isActive,
+        photoUrl,
       } = req.body;
 
       // Проверка существования сотрудника
@@ -345,8 +345,8 @@ OrganizationStaffRouter.put(
       if (customRole !== undefined) updateData.customRole = customRole;
       if (specialty !== undefined) updateData.specialty = specialty;
       if (description !== undefined) updateData.description = description;
-      if (is_active !== undefined) updateData.is_active = is_active;
-      if (photo_url !== undefined) updateData.photo_url = photo_url;
+      if (isActive !== undefined) updateData.is_active = isActive;
+      if (photoUrl !== undefined) updateData.photo_url = photoUrl;
 
       // Хеширование нового пароля если он указан
       if (password) {
@@ -805,9 +805,9 @@ export default OrganizationStaffRouter;
  *         description:
  *           type: string
  *           nullable: true
- *         is_active:
+ *         isActive:
  *           type: boolean
- *         photo_url:
+ *         photoUrl:
  *           type: string
  *           nullable: true
  *         createdAt:
@@ -933,9 +933,9 @@ export default OrganizationStaffRouter;
  *                 type: string
  *               description:
  *                 type: string
- *               is_active:
+ *               isActive:
  *                 type: boolean
- *               photo_url:
+ *               photoUrl:
  *                 type: string
  *     responses:
  *       201:

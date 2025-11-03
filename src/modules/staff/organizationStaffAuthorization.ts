@@ -69,7 +69,7 @@ OrganizationStaffAuthorizationRouter.post(
           email: staff.email,
           organizationId: staff.organization.id,
         },
-        envConfig.JWT_SECRET,
+        envConfig.JWT_REFRESH_SECRET,
         { expiresIn: "90d" }
       );
 
@@ -316,7 +316,7 @@ export default OrganizationStaffAuthorizationRouter;
 
 /**
  * @swagger
- * /staffAuthorization/auth/login:
+ * /staffAuthorization/login:
  *   post:
  *     summary: Авторизация сотрудника (Login)
  *     tags: [OrganizationStaffAuth]
@@ -363,7 +363,7 @@ export default OrganizationStaffAuthorizationRouter;
 
 /**
  * @swagger
- * /staffAuthorization/auth/logout:
+ * /staffAuthorization/logout:
  *   post:
  *     summary: Выход сотрудника (Logout)
  *     tags: [OrganizationStaffAuth]
@@ -387,7 +387,7 @@ export default OrganizationStaffAuthorizationRouter;
 
 /**
  * @swagger
- * /staffAuthorization/auth/refresh:
+ * /staffAuthorization/refresh:
  *   post:
  *     summary: Обновление access токена (Refresh Token)
  *     tags: [OrganizationStaffAuth]
@@ -421,7 +421,7 @@ export default OrganizationStaffAuthorizationRouter;
 
 /**
  * @swagger
- * /staffAuthorization/auth/me:
+ * /staffAuthorization/me:
  *   get:
  *     summary: Получение данных текущего пользователя
  *     tags: [OrganizationStaffAuth]
@@ -447,7 +447,7 @@ export default OrganizationStaffAuthorizationRouter;
 
 /**
  * @swagger
- * /staffAuthorization/auth/change-password:
+ * /staffAuthorization/change-password:
  *   post:
  *     summary: Смена пароля сотрудника
  *     tags: [OrganizationStaffAuth]
