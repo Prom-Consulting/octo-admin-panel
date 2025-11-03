@@ -13,8 +13,6 @@ import {
   checkOrganizationAccess,
 } from "../../middleware/authStaffMiddleware.ts";
 import Organization from "../organization/Organization.ts";
-import axios from "axios";
-import { octoApi } from "../../constants/urls.ts";
 import User from "../user/User.ts";
 
 const SALT_ROUNDS = 10;
@@ -138,9 +136,6 @@ OrganizationStaffRouter.post(
   authorizeRoles("manager", "owner"),
   // checkOrganizationAccess,
   async (req: Request, res: Response, next: NextFunction) => {
-    const transaction = await sequelize.transaction();
-    const tokenHeader = req.headers.authorization!.split(" ")[1];
-
     const {
       organizationId,
       branches = [],
@@ -155,10 +150,6 @@ OrganizationStaffRouter.post(
       description,
       is_active = true,
       photo_url,
-
-      //для создания зарплаты
-      baseSalary,
-      commissionRate,
     } = req.body;
 
     try {
@@ -168,7 +159,6 @@ OrganizationStaffRouter.post(
         return res.sendStatus(400).json({error: "User not found"});
       }
 
-      // Валидация обязательных полей
       if (!organizationId) {
         return res.status(400).json({
           success: false,
@@ -188,7 +178,6 @@ OrganizationStaffRouter.post(
         });
       }
 
-      // Валидация филиалов
       const branchValidation = await validateBranches(branches, organizationId);
 
       if (!branchValidation.isValid) {
@@ -198,7 +187,6 @@ OrganizationStaffRouter.post(
         });
       }
 
-      // Валидация роли
       if (role && !ALLOWED_ROLES.includes(role as StaffRole)) {
         return res.status(422).json({
           success: false,
@@ -206,7 +194,6 @@ OrganizationStaffRouter.post(
         });
       }
 
-      // Проверка существования email
       const existingStaff = await OrganizationStaff.findOne({
         where: { email },
         attributes: ["id", "email"],
@@ -220,7 +207,6 @@ OrganizationStaffRouter.post(
       }
 
       const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
-      // const token = generateToken({ email, role, organizationId, organizationName: organization.name });
 
       const newStaff = await OrganizationStaff.create({
         organization: {
@@ -239,26 +225,7 @@ OrganizationStaffRouter.post(
         description,
         is_active,
         photo_url,
-      }, { transaction });
-
-
-      // await axios.post(`${octoApi}salaries?branch_id=6`, {
-      //   staff: {
-      //     id: newStaff.id,
-      //     first_name: newStaff.first_name,
-      //     last_name: newStaff.last_name,
-      //     role: newStaff.role,
-      //   },
-      //     baseSalary: baseSalary,
-      //     commissionRate: commissionRate,
-      //   },{
-      //   headers: {
-      //     authorization: `Bearer ${tokenHeader}`,
-      //     "Content-Type": "application/json",
-      //   },
-      //   });
-
-      await transaction.commit();
+      });
 
       // Возвращаем сотрудника без пароля
       const { password: _, email: __, ...staffData } = newStaff.toJSON();
@@ -269,16 +236,6 @@ OrganizationStaffRouter.post(
         data: staffData,
       });
     } catch (error) {
-      await transaction.rollback();
-      if (axios.isAxiosError(error)) {
-        return res.status(error.response?.status || 500).json({
-          success: false,
-          message: error.response?.data?.message || error.message,
-          data: error.response?.data || null,
-          url: error.config?.url,
-          method: error.config?.method,
-        });
-      }
       console.error("Error in createStaff:", error);
       next(error);
     }

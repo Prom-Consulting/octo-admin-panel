@@ -26,7 +26,11 @@ app.use(logger);
 // app.use(cors());
 app.use(
   cors({
-    origin: "https://instant-arlena-promconsulting-cb589535.koyeb.app", // только для фронта на 3000 порту
+      origin: [
+        "https://instant-arlena-promconsulting-cb589535.koyeb.app",
+        "http://localhost:5173",
+        "http://localhost:5174",
+      ], // только для фронта на 3000 порту
     methods: ["GET", "POST", "PUT", "DELETE"], // какие методы разрешены
     credentials: true, // если надо передавать куки или токены
   })

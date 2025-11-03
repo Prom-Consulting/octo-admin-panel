@@ -68,15 +68,20 @@ WorkingDatesServiceRoute.post("/:staffId", async (req: Request, res: Response, n
         return res.status(400).send({ error: "Staff not found" });
       }
 
+      const tz = branch.timezone || "UTC";
+      const requestedWorkDateUTC = DateTime.fromISO(workDate, { zone: tz }).startOf("day").toUTC().toJSDate();
+
       const existingWorkDate = await WorkingDates.findOne({
-        where: { staff_id: staffId, work_date: workDate }
+        where: {
+          staff_id: staffId,
+          work_date: requestedWorkDateUTC,
+        }
       });
 
       if (existingWorkDate) {
         return res.status(400).send({ error: "The employee is already working on this date." });
       }
 
-      const tz = branch.timezone || "UTC";
       const startDateTime = DateTime.fromISO(`${workDate}T${startTime}`, { zone: tz });
       const endDateTime = DateTime.fromISO(`${workDate}T${endTime}`, { zone: tz });
 
