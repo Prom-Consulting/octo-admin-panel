@@ -69,7 +69,7 @@ OrganizationStaffAuthorizationRouter.post(
           email: staff.email,
           organizationId: staff.organization.id,
         },
-        envConfig.JWT_REFRESH_SECRET,
+        envConfig.JWT_SECRET,
         { expiresIn: "90d" }
       );
 
