@@ -44,7 +44,8 @@ WorkingDatesServiceRoute.get("/", async (req: Request, res:Response, next: NextF
 
 WorkingDatesServiceRoute.post("/:staffId", async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { staffId, branchId } = req.params;
+      const { staffId } = req.params;
+      const { branchId } = req.query;
       const { workDate, startTime, endTime } = req.body;
 
       if (!staffId) {

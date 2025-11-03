@@ -120,6 +120,8 @@ export const createAssignment = async (
       return res.status(404).json({ error: "Employee not found" });
     }
 
+    const discountValue = discount || 0;
+
     // const workingDates = await WorkingDates.findOne({
     //   where: {
     //     branch_id: branchId,
@@ -154,7 +156,7 @@ export const createAssignment = async (
 
     const finalPrice = Math.max(
       0,
-      Math.round(totalPrice - (totalPrice * discount) / 100)
+      Math.round(totalPrice - (totalPrice * discountValue) / 100)
     );
     const startDateTime = DateTime.fromISO(`${assignment_date}T${start_time}`, {
       zone: branch.timezone,
@@ -263,7 +265,7 @@ export const editAssignment = async (
       discount,
       paid,
       payment_method,
-      gift_certificate_id,
+      gift_certificate_number,
     } = req.body;
 
     if (status && !ASSIGNMENT_STATUSES.includes(status as AssignmentStatus)) {
@@ -421,7 +423,7 @@ export const editAssignment = async (
           .json({ error: "Payment method required when marking as paid" });
       }
 
-      if (payment_method === "gift_certificate" && !gift_certificate_id) {
+      if (payment_method === "gift_certificate" && !gift_certificate_number) {
         return res
           .status(400)
           .json({ error: "Please provide the gift certificate ID" });
@@ -434,6 +436,7 @@ export const editAssignment = async (
           `http://localhost:3000/accounting/refund/${assignment.id}?branch_id=${assignment.branch_id}`,
           {
             status: "refund",
+            source_type: "assignment"
           },
           {
             headers: {
@@ -459,11 +462,11 @@ export const editAssignment = async (
 
     if (paid === "paid") {
       const client = assignment.client_snapshot;
-      const employee = assignment.employee_snapshot;
-      const managerSnap = updates.manager_snapshot;
+      const performedBy = assignment.employee_snapshot; // мастер (исполнитель)
+      const createdBySnap = updates.manager_snapshot;   // кто оформил (кассир/админ)
 
       if (
-        payment_method.lenth <= 0 ||
+        !payment_method?.length ||
         !assignment.total_duration ||
         !updates.final_price
       ) {
@@ -478,54 +481,53 @@ export const editAssignment = async (
 
       let totalPaid = 0;
 
-      if (payment_method.length > 0) {
-        for (const method of payment_method) {
-          if (method.type === "gift_certificate") {
-            if (!gift_certificate_id) {
-              return res
-                .status(400)
-                .send({ error: "Gift certificate ID is required" });
-            }
-
-            const { data: certificateData } = await axios.get(
-              `${octoApi}gift-certificates/${gift_certificate_id}`,
-              {
-                headers: {
-                  authorization: `Bearer ${token}`,
-                  "Content-Type": "application/json",
-                },
-              }
-            );
-
-            const certificate = certificateData;
-
-            const nowUtc = DateTime.now().toUTC();
-            const expiryUtc = DateTime.fromJSDate(certificate.expiry_date).toUTC();
-
-            if (nowUtc > expiryUtc) {
-              return res.status(400).send({ error: "Gift certificate has expired" });
-            }
-
-            discountValue = certificate.discount;
-
-            giftCertificateSnapshot = {
-              certificate_number: certificate.certificate_number,
-              amount: certificate.amount,
-              discount: certificate.discount,
-              expiry_date: certificate.expiry_date,
-            };
-            giftCertificateId = certificate.id;
-
-            method.amount = certificate.amount;
-            console.log("certificate amount", method.amount);
-          } else {
-              method.amount = transformPrices(method.amount);
+      for (const method of payment_method) {
+        if (method.type === "gift_certificate") {
+          if (!gift_certificate_number) {
+            return res
+              .status(400)
+              .send({ error: "Gift certificate number is required" });
           }
-          if (method.amount) totalPaid += method.amount;
-          if (!method.name) method.name = null;
-          updates.payment_method = {methods: [...payment_method], total: totalPaid };
+
+          const { data: certificateData } = await axios.get(
+            `${octoApi}gift-certificates/${gift_certificate_number}`,
+            {
+              headers: {
+                authorization: `Bearer ${token}`,
+                "Content-Type": "application/json",
+              },
+            }
+          );
+
+          const certificate = certificateData;
+
+          const nowUtc = DateTime.now().toUTC();
+          const expiryUtc = DateTime.fromJSDate(certificate.expiry_date).toUTC();
+
+          if (nowUtc > expiryUtc) {
+            return res.status(400).send({ error: "Gift certificate has expired" });
+          }
+
+          discountValue = certificate.discount;
+
+          giftCertificateSnapshot = {
+            certificate_number: certificate.certificate_number,
+            amount: certificate.amount,
+            discount: certificate.discount,
+            expiry_date: certificate.expiry_date,
+          };
+          giftCertificateId = certificate.id;
+
+          method.amount = certificate.amount;
+        } else {
+          method.amount = transformPrices(method.amount);
         }
+
+        if (method.amount) totalPaid += method.amount;
+        if (!method.name) method.name = null;
       }
+
+      updates.payment_method = { methods: [...payment_method], total: totalPaid };
 
       const finalPrice = Math.max(
         0,
@@ -544,12 +546,18 @@ export const editAssignment = async (
           last_name: client.last_name || null,
           phone: client.phone,
         },
-        employee_id: assignment.employee_id,
-        employee_snapshot: employee,
-        manager_id: updates.manager_id,
-        manager_snapshot: managerSnap,
-        assignment_id: assignment.id,
-        duration: assignment.total_duration,
+        performed_by_id: assignment.employee_id,
+        performed_by_snapshot: performedBy,
+        created_by_id: updates.manager_id,
+        created_by_snapshot: createdBySnap,
+        source_type: "assignment",
+        source_id: assignment.id,
+        source_snapshot: {
+          main_service: assignment.service_snapshot.name,
+          additional_services: assignment.additional_services?.map(service => service.name),
+          date: assignment.assignment_date,
+          total_duration: assignment.total_duration,
+        },
         payment_method: updates.payment_method?.methods,
         discount: discountValue,
         date: DateTime.now().setZone(assignment.timezone).toUTC().toJSDate(),
