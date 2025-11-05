@@ -13,7 +13,6 @@ import {
   checkOrganizationAccess,
 } from "../../middleware/authStaffMiddleware.ts";
 import Organization from "../organization/Organization.ts";
-import User from "../user/User.ts";
 
 const SALT_ROUNDS = 10;
 
@@ -134,7 +133,6 @@ OrganizationStaffRouter.get(
 OrganizationStaffRouter.post(
   "/",
   authorizeRoles("manager", "owner"),
-  // checkOrganizationAccess,
   async (req: Request, res: Response, next: NextFunction) => {
     const {
       organizationId,
@@ -153,16 +151,10 @@ OrganizationStaffRouter.post(
     } = req.body;
 
     try {
-      const user = await User.findByPk(req.user?.id);
-
-      if (!user) {
-        return res.sendStatus(400).json({error: "User not found"});
-      }
-
       if (!organizationId) {
         return res.status(400).json({
           success: false,
-          message: "organization id with id is required",
+          message: "organizationId is required",
         });
       }
 
@@ -179,7 +171,6 @@ OrganizationStaffRouter.post(
       }
 
       const branchValidation = await validateBranches(branches, organizationId);
-
       if (!branchValidation.isValid) {
         return res.status(400).json({
           success: false,
@@ -198,7 +189,6 @@ OrganizationStaffRouter.post(
         where: { email },
         attributes: ["id", "email"],
       });
-
       if (existingStaff) {
         return res.status(409).json({
           success: false,
@@ -227,7 +217,6 @@ OrganizationStaffRouter.post(
         photo_url: photoUrl,
       });
 
-      // Возвращаем сотрудника без пароля
       const { password: _, email: __, ...staffData } = newStaff.toJSON();
 
       return res.status(201).json({
