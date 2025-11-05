@@ -14,9 +14,10 @@ import OrganizationStaff from "../staff/OrganizationStaff.ts";
 import transformPrices from "../../utils /transformPrices.ts";
 import { DateTime } from "luxon";
 import { checkTimeOverlap } from "./checkTimeOverlap.ts";
-import type { ServiceInfo } from "../../types";
+import type { CertificateInfo, ServiceInfo } from "../../types";
 import User from "../user/User.ts";
-import { eventBus } from "../../events/eventBus.ts";
+import axios from "axios";
+import { octoApi } from "../../constants/urls.ts";
 
 export const getListAssignments = async (
   req: Request,
@@ -241,6 +242,7 @@ export const editAssignment = async (
     const { id } = req.params;
     const user = req.user!;
     const assignment = await Assignment.findByPk(id);
+    const token = req.headers.authorization!.split(" ")[1];
 
     if (!assignment) return res.status(404).json({ error: "Assignment not found" });
 
@@ -352,22 +354,186 @@ export const editAssignment = async (
       }
     }
 
+    if (paid === "refund") {
+      try {
+        await axios.patch(
+          `http://localhost:3000/accounting/refund/${assignment.id}?branch_id=${assignment.branch_id}`,
+          {
+            status: "refund",
+            source_type: "assignment"
+          },
+          {
+            headers: {
+              authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
+        return res.send({
+          message:
+            "Assignment updated successfully. Related accounting record marked as 'refund'.",
+          assignment,
+        });
+      } catch (e) {
+        return res.status(400).send({ error: e });
+      }
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({ error: "No fields to update" });
+    }
+
+    if (paid === "paid") {
+      const client = assignment.client_snapshot;
+      const performedBy = assignment.employee_snapshot; // мастер (исполнитель)
+      const createdBySnap = updates.manager_snapshot;   // кто оформил (кассир/админ)
+
+      if (
+        !paymentMethod?.length ||
+        !assignment.total_duration ||
+        !updates.final_price
+      ) {
+        return res
+          .status(400)
+          .send({ error: "Missing required fields for accounting" });
+      }
+
+      let discountValue = discount ?? assignment.discount ?? 0;
+      let giftCertificateSnapshot: CertificateInfo | null = null;
+      let giftCertificateId: number | null = null;
+
+      let totalPaid = 0;
+
+      for (const method of paymentMethod) {
+        if (method.type === "gift_certificate") {
+          if (!certificateNumber) {
+            return res
+              .status(400)
+              .send({ error: "Gift certificate number is required" });
+          }
+
+          const { data: certificateData } = await axios.get(
+            `${octoApi}gift-certificates/${certificateNumber}`,
+            {
+              headers: {
+                authorization: `Bearer ${token}`,
+                "Content-Type": "application/json",
+              },
+            }
+          );
+
+          const certificate = certificateData;
+
+          const nowUtc = DateTime.now().toUTC();
+          const expiryUtc = DateTime.fromJSDate(certificate.expiry_date).toUTC();
+
+          if (nowUtc > expiryUtc) {
+            return res.status(400).send({ error: "Gift certificate has expired" });
+          }
+
+          discountValue = certificate.discount;
+
+          giftCertificateSnapshot = {
+            certificate_number: certificate.certificate_number,
+            amount: certificate.amount,
+            discount: certificate.discount,
+            expiry_date: certificate.expiry_date,
+          };
+          giftCertificateId = certificate.id;
+
+          method.amount = certificate.amount;
+        } else {
+          method.amount = transformPrices(method.amount);
+        }
+
+        if (method.amount) totalPaid += method.amount;
+        if (!method.name) method.name = null;
+      }
+
+      updates.payment_method = { methods: [...paymentMethod], total: totalPaid };
+
+      const finalPrice = Math.max(
+        0,
+        Math.round(totalPrice - (totalPrice * discountValue) / 100)
+      );
+
+      updates.discount = discountValue;
+      updates.final_price = finalPrice;
+      updates.total_duration = assignment.total_duration;
+
+      const newAccounting = {
+        branch_id: assignment.branch_id,
+        client_id: assignment.client_id,
+        client_snapshot: {
+          first_name: client.first_name,
+          last_name: client.last_name || null,
+          phone: client.phone,
+        },
+        performed_by_id: assignment.employee_id,
+        performed_by_snapshot: performedBy,
+        created_by_id: updates.manager_id,
+        created_by_snapshot: createdBySnap,
+        source_type: "assignment",
+        source_id: assignment.id,
+        source_snapshot: {
+          main_service: assignment.service_snapshot.name,
+          additional_services: assignment.additional_services?.map(service => service.name),
+          date: assignment.assignment_date,
+          total_duration: assignment.total_duration,
+        },
+        payment_method: updates.payment_method?.methods,
+        discount: discountValue,
+        date: DateTime.now().setZone(assignment.timezone).toUTC().toJSDate(),
+        timezone: assignment.timezone,
+        amount: finalPrice,
+        status: "success",
+        gift_certificate_id: giftCertificateId,
+        gift_certificate_snapshot: giftCertificateSnapshot,
+      };
+
+      await axios.post(
+        `${octoApi}accounting?branch_id=${assignment.branch_id}`,
+        newAccounting,
+        {
+          headers: {
+            authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      await assignment.update(updates);
+
+      return res.json({
+        message: `Assignment updated successfully. Created accounting`,
+        assignment,
+      });
+    }
+
     await assignment.update(updates);
 
-    const assignmentUpdatedEvent = {
-      assignmentId: assignment.id,
-      branchId: assignment.branch_id,
-      updates,
-      paid,
-      paymentMethod,
-      userId: user.id,
-      certificateNumber,
-    };
+    // const assignmentUpdatedEvent = {
+    //   assignmentId: assignment.id,
+    //   branchId: assignment.branch_id,
+    //   updates,
+    //   paid,
+    //   paymentMethod,
+    //   userId: user.id,
+    //   certificateNumber,
+    // };
 
-    await eventBus.publish("ASSIGNMENT_UPDATED", assignmentUpdatedEvent);
     return res.json({ message: "Assignment updated successfully", assignment });
   } catch (e) {
-    console.error("Assignment edit error", e);
+    if (axios.isAxiosError(e)) {
+      return res.status(e.response?.status || 500).json({
+        success: false,
+        message: e.response?.data?.message || e.message,
+        data: e.response?.data || null,
+        url: e.config?.url,
+        method: e.config?.method,
+      });
+    }
     next(e);
   }
 };
