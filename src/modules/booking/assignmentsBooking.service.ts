@@ -1,9 +1,9 @@
 import { Router } from "express";
 import type { Request, Response, NextFunction } from "express";
 import { Op } from "sequelize";
-import Assignment from "../assigments/Assignment.ts";
+import Assignment from "../assignments/Assignment.ts";
 import { authMiddleware } from "../../middleware/auth.ts";
-import { createAssignment, getAssignmentById } from "../assigments/assignment.controller.ts";
+import { createAssignment, getAssignmentById } from "../assignments/assignment.controller.ts";
 
 const AssignmentsBookingServiceRoute = Router();
 
@@ -78,17 +78,10 @@ export default AssignmentsBookingServiceRoute;
 
 /**
  * @swagger
- * tags:
- *   name: Assignments
- *   description: Управление записями клиентов
- */
-
-/**
- * @swagger
- * /assignments:
+ * /booking/assignments:
  *   post:
- *     summary: Создать новую запись с синхронизацией на клиентскую БД
- *     tags: [Assignments]
+ *     summary: Создать запись (assignment)
+ *     tags: [Booking]
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -97,61 +90,68 @@ export default AssignmentsBookingServiceRoute;
  *         application/json:
  *           schema:
  *             type: object
- *             required:
- *               - organizationId
- *               - branchId
- *               - client
- *               - employee
- *               - service
- *               - assignmentDate
- *               - startTime
- *               - source
  *             properties:
- *               organizationId:
+ *               branch_id:
  *                 type: integer
- *               branchId:
+ *                 example: 1
+ *               staff_id:
  *                 type: integer
- *               timezone:
+ *                 example: 12
+ *               client_id:
+ *                 type: integer
+ *                 example: 55
+ *               service_id:
+ *                 type: integer
+ *                 example: 8
+ *               start_time:
  *                 type: string
- *                 default: UTC
- *               client:
- *                 type: object
- *                 properties:
- *                   id:
- *                     type: integer
- *                   first_name:
- *                     type: string
- *                   last_name:
- *                     type: string
- *                   phone:
- *                     type: string
- *               employee:
- *                 type: object
- *               service:
- *                 type: object
- *               additionalServices:
- *                 type: array
- *                 items:
- *                   type: object
- *               assignmentDate:
+ *                 format: date-time
+ *                 example: "2025-11-05T09:00:00Z"
+ *               end_time:
  *                 type: string
- *                 format: date
- *               startTime:
+ *                 format: date-time
+ *                 example: "2025-11-05T10:00:00Z"
+ *               comment:
  *                 type: string
- *               notes:
- *                 type: string
- *               source:
- *                 type: string
- *                 enum: [web, mobile, admin, phone]
- *               discount:
- *                 type: number
+ *                 example: "Первичный приём клиента"
  *     responses:
  *       201:
- *         description: Запись создана и синхронизирована
+ *         description: Задание успешно создано
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Assignment'
  *       400:
- *         description: Ошибка валидации
- *       409:
- *         description: Конфликт времени
+ *         description: Неверные данные в запросе
+ *       401:
+ *         description: Неавторизован
  *       500:
- *         description: Внутренняя ошибка сервера
+ *         description: Ошибка сервера
+ *
+ * /booking/assignments/{id}:
+ *   get:
+ *     summary: Получить запись по ID
+ *     tags: [AssignmentsBooking]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID задания
+ *     responses:
+ *       200:
+ *         description: Успешное получение данных задания
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Assignment'
+ *       401:
+ *         description: Неавторизован
+ *       404:
+ *         description: Задание не найдено
+ *       500:
+ *         description: Ошибка сервера
  */

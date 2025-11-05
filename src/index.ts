@@ -11,7 +11,7 @@ import { setupSwagger } from "../swagger.ts";
 import ClientServiceRouter from "./modules/client/client.service.ts";
 import OrganizationServiceRoute from "./modules/organization/organization.service.ts";
 import BookingRoute from "./modules/booking/booking.service.ts";
-import AssignmentsServiceRoute from "./modules/assigments/assignment.service.ts";
+import AssignmentsServiceRoute from "./modules/assignments/assignment.service.ts";
 import OrganizationStaffAuthorizationRouter from "./modules/staff/organizationStaffAuthorization.ts";
 import OrganizationStaffRouter from "./modules/staff/organizationStaff.service.ts";
 import AssignmentsBookingServiceRoute from "./modules/booking/assignmentsBooking.service.ts";
