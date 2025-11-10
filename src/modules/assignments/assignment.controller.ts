@@ -14,7 +14,7 @@ import OrganizationStaff from "../staff/OrganizationStaff.ts";
 import transformPrices from "../../utils /transformPrices.ts";
 import { DateTime } from "luxon";
 import { checkTimeOverlap } from "./checkTimeOverlap.ts";
-import type { CertificateInfo, ServiceInfo } from "../../types";
+import type { ServiceInfo } from "../../types";
 import User from "../user/User.ts";
 import axios from "axios";
 import { octoApi } from "../../constants/urls.ts";
@@ -360,7 +360,7 @@ export const editAssignment = async (
           `http://localhost:3000/accounting/refund/${assignment.id}?branch_id=${assignment.branch_id}`,
           {
             status: "refund",
-            source_type: "assignment"
+            sourceType: "assignment"
           },
           {
             headers: {
@@ -400,8 +400,8 @@ export const editAssignment = async (
       }
 
       let discountValue = discount ?? assignment.discount ?? 0;
-      let giftCertificateSnapshot: CertificateInfo | null = null;
-      let giftCertificateId: number | null = null;
+      // let giftCertificateSnapshot: CertificateInfo | null = null;
+      // let giftCertificateId: number | null = null;
 
       let totalPaid = 0;
 
@@ -412,42 +412,47 @@ export const editAssignment = async (
               .status(400)
               .send({ error: "Gift certificate number is required" });
           }
-
-          const { data: certificateData } = await axios.get(
-            `${octoApi}gift-certificates/${certificateNumber}`,
-            {
-              headers: {
-                authorization: `Bearer ${token}`,
-                "Content-Type": "application/json",
-              },
-            }
-          );
-
-          const certificate = certificateData;
-
-          const nowUtc = DateTime.now().toUTC();
-          const expiryUtc = DateTime.fromJSDate(certificate.expiry_date).toUTC();
-
-          if (nowUtc > expiryUtc) {
-            return res.status(400).send({ error: "Gift certificate has expired" });
-          }
-
-          discountValue = certificate.discount;
-
-          giftCertificateSnapshot = {
-            certificate_number: certificate.certificate_number,
-            amount: certificate.amount,
-            discount: certificate.discount,
-            expiry_date: certificate.expiry_date,
-          };
-          giftCertificateId = certificate.id;
-
-          method.amount = certificate.amount;
-        } else {
-          method.amount = transformPrices(method.amount);
         }
 
-        if (method.amount) totalPaid += method.amount;
+        //
+        //   const { data: certificateData } = await axios.get(
+        //     `${octoApi}gift-certificates/${certificateNumber}`,
+        //     {
+        //       headers: {
+        //         authorization: `Bearer ${token}`,
+        //         "Content-Type": "application/json",
+        //       },
+        //     }
+        //   );
+        //
+        //   const certificate = certificateData;
+        //
+        //   const nowUtc = DateTime.now().toUTC();
+        //   const expiryUtc = DateTime.fromJSDate(certificate.expiry_date).toUTC();
+        //
+        //   if (nowUtc > expiryUtc) {
+        //     return res.status(400).send({ error: "Gift certificate has expired" });
+        //   }
+        //
+        //   discountValue = certificate.discount;
+        //
+        //   giftCertificateSnapshot = {
+        //     certificate_number: certificate.certificate_number,
+        //     amount: certificate.amount,
+        //     discount: certificate.discount,
+        //     expiry_date: certificate.expiry_date,
+        //   };
+        //   giftCertificateId = certificate.id;
+        //
+        //   method.amount = certificate.amount;
+        // } else {
+        //   method.amount = transformPrices(method.amount);
+        // }
+
+        if (method.amount) {
+          method.amount = method.type === "gift_certificate" ? method.amount : transformPrices(method.amount);
+          totalPaid += method.amount;
+        }
         if (!method.name) method.name = null;
       }
 
@@ -488,8 +493,8 @@ export const editAssignment = async (
         timezone: assignment.timezone,
         amount: finalPrice,
         status: "success",
-        gift_certificate_id: giftCertificateId,
-        gift_certificate_snapshot: giftCertificateSnapshot,
+        gift_certificate_number: certificateNumber,
+        // gift_certificate_snapshot: giftCertificateSnapshot,
       };
 
       await axios.post(

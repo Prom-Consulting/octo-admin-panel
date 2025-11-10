@@ -16,7 +16,7 @@ export interface AssignmentAttributes {
   chat_id?: string | null;
   branch_id: number;
   organization_id: number;
-  gift_certificate_id: number | null;
+  gift_certificate_number: number | null;
   client_id: number;
   client_snapshot: ClientInfo;
   service_id: number;
@@ -55,7 +55,7 @@ export type AssignmentCreationAttributes = Optional<
   | "notes"
   | "payment_method"
   | "chat_id"
-  | "gift_certificate_id"
+  | "gift_certificate_number"
 >;
 
 export class Assignment
@@ -65,7 +65,7 @@ export class Assignment
   declare id: number;
   declare chat_id: string | null;
   declare branch_id: number;
-  declare gift_certificate_id: number | null;
+  declare gift_certificate_number: number | null;
   declare organization_id: number;
   declare client_id: number;
   declare client_snapshot: ClientInfo;
@@ -106,7 +106,7 @@ Assignment.init(
     service_id: { type: DataTypes.INTEGER, allowNull: false },
     branch_id: { type: DataTypes.INTEGER, allowNull: false },
     chat_id: { type: DataTypes.STRING, allowNull: true },
-    gift_certificate_id: { type: DataTypes.INTEGER, allowNull: true },
+    gift_certificate_number: { type: DataTypes.INTEGER, allowNull: true },
     manager_snapshot: { type: DataTypes.JSONB, allowNull: true },
     employee_snapshot: { type: DataTypes.JSONB, allowNull: true },
     service_snapshot: { type: DataTypes.JSONB, allowNull: false },
