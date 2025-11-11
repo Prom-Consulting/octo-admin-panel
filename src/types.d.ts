@@ -77,3 +77,11 @@ export interface UserToken {
   organizationId?: number;
   organizationName?: string;
 }
+
+export interface OrganizationCreate {
+  name: string;
+  user_id: number;
+  branches: number;
+  paidDate: Date;
+  isActive: boolean;
+}

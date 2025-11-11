@@ -1,122 +1,86 @@
 import express from "express";
-import Organization from "./Organization.ts";
-import { createClientDatabase } from "../../methods/octo_database.ts";
-import User from "../user/User.ts";
-import type { WhereOptions } from "sequelize";
-
-interface OrganizationCreate {
-  name: string;
-  user_id: number;
-  branches: number;
-  paidDate: Date;
-  isActive: boolean;
-}
+import { getListOrganizations, getOrganizationByID } from "./organization.controller.ts";
+import { authenticateToken, authorizeRoles } from "../../middleware/authUserMiddleware.ts";
 
 const OrganizationServiceRoute = express.Router();
+OrganizationServiceRoute.use(authenticateToken, authorizeRoles("owner"));
 
-OrganizationServiceRoute.get("/", async (req, res, next) => {
-  try {
-    const { ownerId } = req.query;
-    const where: WhereOptions<Organization> = {};
+OrganizationServiceRoute.get("/", getListOrganizations);
 
-    if (ownerId) where.user_id = Number(ownerId);
+OrganizationServiceRoute.get("/:id", getOrganizationByID);
 
-    const organizationList = await Organization.findAll({ where });
-    res.send(organizationList);
-  } catch (e) {
-    console.log("Get organization error", e);
-    next(e);
-  }
-});
-
-OrganizationServiceRoute.get("/:id", async (req, res, next) => {
-  try {
-    const { id } = req.params;
-    const organization = await Organization.findByPk(id);
-
-    if (!organization) {
-      return res.status(404).send({error: "Organization not found"});
-    }
-
-    res.send(organization);
-  } catch (e) {
-    console.log("Get by id organization error", e);
-    next(e);
-  }
-});
-
-OrganizationServiceRoute.post("/", async (req, res, next) => {
-  try {
-    const { name, branches, paidDate, userId } = req.body;
-
-    if (!paidDate || !name || !branches || !userId) {
-      return res.status(400).send({ error: "Inputs required" });
-    }
-
-    const existingOrganization = await Organization.findOne({
-      where: { name },
-    });
-
-    const existingUser = await User.findByPk(userId);
-
-    if (existingOrganization) {
-      return res.status(400).send({ error: "Organization already exists" });
-    }
-
-    if (!existingUser) {
-      return res.status(400).send({ error: "The user does not exist" });
-    }
-
-    const organization: OrganizationCreate = {
-      name: name,
-      user_id: Number(userId),
-      branches,
-      paidDate: paidDate,
-      isActive: true,
-    };
-
-    const result = await createClientDatabase(organization);
-
-    if (result === 0) {
-      const newOrganization = await Organization.create(organization);
-
-      return res.status(201).json({
-        newOrganization,
-      });
-    } else {
-      return res.status(500).send({
-        error: "Database issue",
-      });
-    }
-  } catch (e) {
-    console.log("Create organization error",e);
-    next(e);
-  }
-});
-
-OrganizationServiceRoute.patch("/:id", async (req, res, next) => {
-  try {
-    const { id } = req.params;
-    const { name, branches, paidDate, isActive } = req.body;
-
-    const organization = await Organization.findByPk(id);
-    if (!organization) {
-      return res.status(404).json({ message: "Organization not found" });
-    }
-
-    if (name !== undefined) organization.name = name;
-    if (branches !== undefined) organization.branches = branches;
-    if (paidDate !== undefined) organization.paidDate = new Date(paidDate);
-    if (isActive !== undefined) organization.isActive = isActive;
-
-    await organization.save();
-
-    res.send(organization);
-  } catch (e) {
-    console.log("Edit organization error", e);
-    next(e);
-  }
-});
+// OrganizationServiceRoute.post("/", async (req, res, next) => {
+//   try {
+//     const { name, branches, paidDate, userId } = req.body;
+//
+//     if (!paidDate || !name || !branches || !userId) {
+//       return res.status(400).send({ error: "Inputs required" });
+//     }
+//
+//     const existingOrganization = await Organization.findOne({
+//       where: { name },
+//     });
+//
+//     const existingUser = await User.findByPk(userId);
+//
+//     if (existingOrganization) {
+//       return res.status(400).send({ error: "Organization already exists" });
+//     }
+//
+//     if (!existingUser) {
+//       return res.status(400).send({ error: "The user does not exist" });
+//     }
+//
+//     const organization: OrganizationCreate = {
+//       name: name,
+//       user_id: Number(userId),
+//       branches,
+//       paidDate: paidDate,
+//       isActive: true,
+//     };
+//
+//     const result = await createClientDatabase(organization);
+//
+//     if (result === 0) {
+//       const newOrganization = await Organization.create(organization);
+//
+//       return res.status(201).json({
+//         newOrganization,
+//       });
+//     } else {
+//       return res.status(500).send({
+//         error: "Database issue",
+//       });
+//     }
+//   } catch (e) {
+//     console.log("Create organization error",e);
+//     next(e);
+//   }
+// });
+//
+// OrganizationServiceRoute.patch("/:id", async (req, res, next) => {
+//   try {
+//     const { id } = req.params;
+//     const { name, branches, paidDate, isActive } = req.body;
+//
+//     const organization = await Organization.findByPk(id);
+//     if (!organization) {
+//       return res.status(404).json({ message: "Organization not found" });
+//     }
+//
+//     if (name !== undefined) organization.name = name;
+//     if (branches !== undefined) organization.branches = branches;
+//     if (paidDate !== undefined) organization.paidDate = new Date(paidDate);
+//     if (isActive !== undefined) organization.isActive = isActive;
+//
+//     await organization.save();
+//
+//     res.send(organization);
+//   } catch (e) {
+//     console.log("Edit organization error", e);
+//     next(e);
+//   }
+// });
 
 export default OrganizationServiceRoute;
 
@@ -211,40 +175,6 @@ export default OrganizationServiceRoute;
  *       404:
  *         description: Организация не найдена
  *
- *   patch:
- *     summary: Обновить организацию по ID
- *     tags: [Organizations]
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: integer
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               name:
- *                 type: string
- *               branches:
- *                 type: integer
- *               paidDate:
- *                 type: string
- *                 format: date
- *               isActive:
- *                 type: boolean
- *     responses:
- *       200:
- *         description: Организация обновлена
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Organization'
- *       404:
- *         description: Организация не найдена
  */
 
 /**

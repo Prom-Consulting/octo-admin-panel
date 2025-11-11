@@ -14,7 +14,7 @@ declare global {
       user?: {
         id: number;
         firstname: string;
-        lastname?: string;
+        lastname?: string | null;
         email: string;
         role: string;
         organizationId?: number | null;
@@ -61,7 +61,7 @@ export const authenticateToken = async (
         firstname: user.first_name,
         lastname: user.last_name,
         email: user.email,
-        role: user.role || 'owner',
+        role: user.role,
         organizationId: null,
       };
       return next();
