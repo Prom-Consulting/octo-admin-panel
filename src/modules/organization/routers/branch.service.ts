@@ -1,144 +1,22 @@
 import express from "express";
-import Branch from "./Branch.ts";
-import type { WhereOptions } from "sequelize";
-import Organization from "./Organization.ts";
+import {
+  createBranch,
+  deactivateBranch,
+  getBranchById,
+  getBranches,
+  updateBranch,
+} from "../controllers/branch.controllers.ts";
+import { authenticateToken, authorizeRoles } from "../../../middleware/authUserMiddleware.ts";
 
 const BranchServiceRoute = express.Router();
 
-BranchServiceRoute.get("/", async (req, res, next) => {
-  try {
-    const { organizationId } = req.query;
-    const where: WhereOptions<Branch> = {};
+BranchServiceRoute.use(authenticateToken, authorizeRoles("owner"));
 
-    if (organizationId) {
-      where.organization_id = Number(organizationId);
-    }
-
-    const listBranches = await Branch.findAll({ where });
-    return res.send(listBranches);
-  } catch (e) {
-    console.log("Get branch error",e);
-    next(e);
-  }
-});
-
-BranchServiceRoute.get("/:id", async (req, res, next) => {
-  try {
-    const { id } = req.params;
-    const branch = await Branch.findByPk(id);
-    if (!branch) {
-      return res.status(404).send({ error: "Branch not found" });
-    }
-
-    return res.send(branch);
-  } catch (e) {
-    console.log("Get by id branch error", e);
-    next(e);
-  }
-});
-
-BranchServiceRoute.post("/", async (req, res, next) => {
-  try {
-    const {
-      organizationId,
-      name,
-      phone,
-      address,
-      timezone,
-    } = req.body;
-
-    if (!organizationId || !name || !phone || !address || !timezone) {
-      return res
-        .status(400)
-        .send({ error: " owner_id, name, phone, timezone and address are required" });
-    }
-
-    const organization = await Organization.findByPk(organizationId);
-
-    if (!organization) {
-      return res.status(400).send({ error: "Organization not found" });
-    }
-
-    const branches = await Branch.findAll({
-      where: { organization_id: organizationId },
-    });
-
-    const branchLimit = organization.branches ?? 1;
-
-    if (branches.length >= branchLimit) {
-      return res.status(400).send({
-        error: `Organization has reached its branch limit (${branchLimit})`,
-      });
-    }
-
-    const currentBranches = await Branch.count({
-      where: { organization_id: organizationId },
-    });
-
-    if (currentBranches >= organization.branches) {
-      return res
-        .status(400)
-        .send({ error: `User can have only ${organization.branches} branches` });
-    }
-
-    const newBranch = await Branch.create({
-      organization_id: organizationId,
-      name,
-      phone,
-      address,
-      timezone,
-    });
-    return res.send({ message: "Branch created successfully.", newBranch });
-  } catch (e) {
-    console.log("Create branch error", e);
-    next(e);
-  }
-});
-
-BranchServiceRoute.patch("/:id", async (req, res, next) => {
-  try {
-    const { id } = req.params;
-    const { name, phone, address } = req.body;
-
-    const branch = await Branch.findByPk(id);
-    if (!branch) {
-      return res.status(404).send({ error: "Branch not found" });
-    }
-
-    if (name !== undefined) branch.name = name;
-    if (phone !== undefined) branch.phone = phone;
-    if (address !== undefined) branch.address = address;
-
-    await branch.save();
-
-    return res.send({ message: "Branch updated successfully", branch });
-  } catch (e) {
-    console.log("Patch branch error", e);
-    next(e);
-  }
-});
-
-BranchServiceRoute.patch("/:id/deactivate", async (req, res, next) => {
-  try {
-    const { id } = req.params;
-
-    const branch = await Branch.findByPk(id);
-    if (!branch) {
-      return res.status(404).send({ error: "Branch not found" });
-    }
-
-    if (!branch.isActive) {
-      return res.status(401).send({ message: "Permission denied" });
-    }
-
-    branch.isActive = false;
-    await branch.save();
-    return res.send({ message: `You have deactivated the branch: ${branch.name}` });
-  } catch (e) {
-    console.log("Patch branch deactivate error", e);
-    next(e);
-  }
-});
+BranchServiceRoute.get("/", getBranches);
+BranchServiceRoute.get("/:id", getBranchById);
+BranchServiceRoute.post("/", createBranch);
+BranchServiceRoute.patch("/:id", updateBranch);
+BranchServiceRoute.patch("/:id/deactivate", deactivateBranch);
 
 export default BranchServiceRoute;
 

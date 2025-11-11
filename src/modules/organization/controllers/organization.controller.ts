@@ -1,9 +1,9 @@
 import type { NextFunction, Request, Response } from "express";
 import type { WhereOptions } from "sequelize";
-import Organization from "./Organization.ts";
-import User from "../user/User.ts";
-import { createClientDatabase } from "../../methods/octo_database.ts";
-import type { OrganizationCreate } from "../../types";
+import Organization from "../model/Organization.ts";
+import User from "../../user/User.ts";
+import { createClientDatabase } from "../../../methods/octo_database.ts";
+import type { OrganizationCreate } from "../../../types";
 
 export const getListOrganizations = async (
   req: Request,

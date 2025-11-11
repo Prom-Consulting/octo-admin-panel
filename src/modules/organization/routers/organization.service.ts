@@ -1,6 +1,6 @@
 import express from "express";
-import { getListOrganizations, getOrganizationByID } from "./organization.controller.ts";
-import { authenticateToken, authorizeRoles } from "../../middleware/authUserMiddleware.ts";
+import { getListOrganizations, getOrganizationByID } from "../controllers/organization.controller.ts";
+import { authenticateToken, authorizeRoles } from "../../../middleware/authUserMiddleware.ts";
 
 const OrganizationServiceRoute = express.Router();
 OrganizationServiceRoute.use(authenticateToken, authorizeRoles("owner"));

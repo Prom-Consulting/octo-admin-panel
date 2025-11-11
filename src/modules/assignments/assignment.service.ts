@@ -1,5 +1,5 @@
 import express from "express";
-import { authenticateToken } from "../../middleware/authStaffMiddleware.ts";
+import { authenticateToken } from "../../middleware/authUserMiddleware.ts";
 import {
   createAssignment,
   deleteAssignment,
@@ -10,7 +10,7 @@ import {
 
 const AssignmentsServiceRoute = express.Router();
 
-AssignmentsServiceRoute.get("/", getListAssignments);
+AssignmentsServiceRoute.get("/", authenticateToken, getListAssignments);
 AssignmentsServiceRoute.get("/:id", getAssignmentById);
 AssignmentsServiceRoute.post("/", createAssignment);
 AssignmentsServiceRoute.patch("/:id",

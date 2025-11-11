@@ -3,7 +3,7 @@ import { DateTime } from "luxon";
 import { Op, type WhereOptions } from "sequelize";
 import { WorkingDates, type WorkingDatesAttributes } from "./WorkingDates.ts";
 import getDayRange from "../../utils /getDayRange.ts";
-import Branch from "../organization/Branch.ts";
+import Branch from "../organization/model/Branch.ts";
 import OrganizationStaff from "./OrganizationStaff.ts";
 
 const WorkingDatesServiceRoute = express.Router();

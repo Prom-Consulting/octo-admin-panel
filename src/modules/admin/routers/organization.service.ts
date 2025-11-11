@@ -4,7 +4,7 @@ import {
   createOrganization, editOrganization,
   getListOrganizations,
   getOrganizationByID,
-} from "../../organization/organization.controller.ts";
+} from "../../organization/controllers/organization.controller.ts";
 
 const AdminOrganizations = express.Router();
 
