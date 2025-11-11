@@ -6,7 +6,7 @@ import bcrypt from "bcrypt";
 import Organization, { type OrganizationAttributes } from "../organization/Organization.ts";
 import type { WhereOptions } from "sequelize";
 import jwt from "jsonwebtoken";
-import { JWT_REFRESH_SECRET } from "../../middleware/authStaffMiddleware.ts";
+import { JWT_REFRESH_SECRET } from "../../middleware/authUserMiddleware.ts";
 
 const UserServiceRoute = Router();
 
@@ -87,7 +87,7 @@ UserServiceRoute.post(
 
       const accessToken = generateAccessTokenForUser(user, organization.name);
       const refreshToken = generateRefreshTokenForUser(user);
-      user.token = refreshToken;
+      await user.update({token: refreshToken});
 
       res.cookie("refreshToken", refreshToken, {
         httpOnly: true,
@@ -100,6 +100,7 @@ UserServiceRoute.post(
         success: true,
         message: "Success",
         token: accessToken,
+        refreshToken,
         user: {
           id: user.id,
           role: user.role,
@@ -119,6 +120,8 @@ UserServiceRoute.post(
   async (req: Request, res: Response) => {
     try {
       const refreshToken = req.cookies.refreshToken;
+      const { organizationName } = req.body;
+      const where: WhereOptions<OrganizationAttributes> = { };
 
       if (!refreshToken) {
         return res.status(401).json({ message: "No refresh token provided" });
@@ -134,9 +137,14 @@ UserServiceRoute.post(
         return res.status(404).json({ message: "User not found" });
       }
 
-      const organizationName = decoded.organizationName;
+      if (!organizationName) {
+        where.user_id = decoded.id;
+      } else {
+        where.name = organizationName;
+      }
+
       const organization = await Organization.findOne({
-        where: { name: organizationName },
+        where,
       });
 
       if (!organization) {
@@ -147,7 +155,7 @@ UserServiceRoute.post(
 
       return res.json({
         success: true,
-        accessToken: newAccessToken,
+        token: newAccessToken,
       });
     } catch (e) {
       console.error("Refresh error:", e);
@@ -236,11 +244,10 @@ UserServiceRoute.delete(
   }
 );
 
-UserServiceRoute.post(
+UserServiceRoute.delete(
   "/logout",
-  async (req: Request, res: Response) => {
+  async (req: Request, res: Response, next: NextFunction) => {
     try {
-      // просто очищаем cookie с refreshToken
       res.clearCookie("refreshToken", {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
@@ -253,7 +260,7 @@ UserServiceRoute.post(
       });
     } catch (e) {
       console.error("Logout error:", e);
-      res.status(500).json({ success: false, message: "Logout failed" });
+      next(e);
     }
   }
 );

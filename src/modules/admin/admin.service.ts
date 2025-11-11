@@ -8,151 +8,49 @@ import { generatePassword } from "../../methods/methods.ts";
 const AdminServiceRoute = Router();
 
 interface adminType {
-  username: string;
+  email: string;
+  firstname: string;
+  lastname?: string | null;
   password: string;
   role: "admin";
 }
 
-const AUTH_TOKEN = process.env.AUTHORIZATION_TOKEN;
-
 AdminServiceRoute.post(
   "/signUp",
   async (req: Request, res: Response, next: NextFunction) => {
-    const { username, password }: adminType = req.body;
-    const authorizationToken = req.get("Auth-token");
+   try {
+     const { email, password, firstname, lastname }: adminType = req.body;
 
-    if (!authorizationToken) {
-      return res.status(401).send({ message: "No token provided" });
-    }
+     const existedAdmin = await AdminModel.findOne({
+       where: { email },
+     });
 
-    if (authorizationToken !== AUTH_TOKEN) {
-      return res.status(401).send({ message: "No token provided" });
-    }
+     if (existedAdmin) {
+       return res.status(422).send({ error: "Admin already exists" });
+     }
 
-    const existedAdmin = await AdminModel.findOne({
-      where: { username },
-    });
+     const hashedPassword = await bcrypt.hash(password, 10);
 
-    if (existedAdmin) {
-      return res.status(422).send({ error: "Admin already exists" });
-    }
+     const admin = {
+       email,
+       role: "admin" as const,
+       password: hashedPassword,
+       first_name: firstname,
+       last_name: lastname
+     };
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+     const newAdmin = await AdminModel.create(admin);
 
-    const admin = {
-      username: username,
-      role: "admin" as const,
-      password: hashedPassword,
-    };
-
-    const newAdmin = await AdminModel.create(admin);
-
-    return res.status(201).json({
-      username: newAdmin.username,
-      password: newAdmin.password,
-      role: newAdmin.role,
-      createdAt: newAdmin.createdAt,
-    });
+     return res.status(201).json({
+       username: newAdmin.email,
+       password: newAdmin.password,
+       role: newAdmin.role,
+       createdAt: newAdmin.createdAt,
+     });
+   } catch (error) {
+   next(error);}
   }
 );
-
-/**
- * @openapi
- * /admin/createUsers:
- *   post:
- *     summary: Создать нового пользователя и базу данных для него
- *     tags:
- *       - User
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - organizationName
- *               - email
- *               - branches
- *             properties:
- *               organizationName:
- *                 type: string
- *                 example: "kulikov6"
- *               email:
- *                 type: string
- *                 example: "kulik6@gmail.com"
- *               branches:
- *                 type: integer
- *                 example: 5
- *               paidDate:
- *                 type: string
- *                 format: date-time
- *                 example: "2025-09-17T15:45:00.000Z"
- *               isActive:
- *                 type: boolean
- *                 example: true
- *           example:
- *             organizationName: "kulikov6"
- *             email: "kulik6@gmail.com"
- *             branches: 5
- *             paidDate: "2025-09-17T15:45:00.000Z"
- *             isActive: true
- *     responses:
- *       201:
- *         description: Пользователь успешно создан
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 newUser:
- *                   type: object
- *                   properties:
- *                     id:
- *                       type: integer
- *                       example: 28
- *                     email:
- *                       type: string
- *                       example: "kulik6@gmail.com"
- *                     organizationName:
- *                       type: string
- *                       example: "kulikov6"
- *                     branches:
- *                       type: integer
- *                       example: 5
- *                     role:
- *                       type: string
- *                       example: "owner"
- *                     isActive:
- *                       type: boolean
- *                       example: true
- *                     createdAt:
- *                       type: string
- *                       format: date-time
- *                       example: "2025-09-26T08:03:07.767Z"
- *                     updatedAt:
- *                       type: string
- *                       format: date-time
- *                       example: "2025-09-26T08:03:07.767Z"
- *       422:
- *         description: Ошибка валидации или пользователь уже существует
- *         content:
- *           application/json:
- *             examples:
- *               missingFields:
- *                 summary: Обязательные поля не указаны
- *                 value:
- *                   error: "Inputs required"
- *               duplicateUser:
- *                 summary: Пользователь с таким organizationName уже существует
- *                 value:
- *                   error: "User already exists"
- *       500:
- *         description: Проблема с созданием базы данных
- *         content:
- *           application/json:
- *             example:
- *               error: "Database issue"
- */
 
 AdminServiceRoute.post(
   "/createUsers",
@@ -160,9 +58,9 @@ AdminServiceRoute.post(
     try {
       const userData: UserToCreate = req.body;
 
-      const { first_name, email, last_name, isActive } = userData;
+      const { firstname, email, lastname, isActive } = userData;
 
-      if (!first_name || !email) {
+      if (!firstname || !email) {
         return res.status(422).send({
           error: "Inputs required",
         });
@@ -185,8 +83,8 @@ AdminServiceRoute.post(
 
       const user = await User.create({
         email: email,
-        first_name,
-        last_name,
+        first_name: firstname,
+        last_name: lastname,
         password: hashedPassword,
         isActive: isActive,
         role: "owner",
@@ -199,5 +97,79 @@ AdminServiceRoute.post(
     }
   }
 );
+
+/**
+ * @openapi
+ * /admin/createUsers:
+ *   post:
+ *     summary: Создать нового пользователя
+ *     description: Создает нового пользователя (владельца) и автоматически генерирует пароль.
+ *     tags:
+ *       - User
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - firstname
+ *               - email
+ *             properties:
+ *               firstname:
+ *                 type: string
+ *                 example: "Aidar"
+ *               lastname:
+ *                 type: string
+ *                 example: "Bekov"
+ *               email:
+ *                 type: string
+ *                 example: "aidarbekov@gmail.com"
+ *               isActive:
+ *                 type: boolean
+ *                 example: true
+ *           example:
+ *             firstname: "Aidar"
+ *             lastname: "Bekov"
+ *             email: "aidarbekov@gmail.com"
+ *             isActive: true
+ *     responses:
+ *       201:
+ *         description: Пользователь успешно создан
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: "New user added"
+ *               user:
+ *                 id: 28
+ *                 email: "aidarbekov@gmail.com"
+ *                 first_name: "Aidar"
+ *                 last_name: "Bekov"
+ *                 role: "owner"
+ *                 isActive: true
+ *                 createdAt: "2025-11-11T08:03:07.767Z"
+ *                 updatedAt: "2025-11-11T08:03:07.767Z"
+ *               password: "generatedRandomPassword123"
+ *       422:
+ *         description: Ошибка валидации или пользователь уже существует
+ *         content:
+ *           application/json:
+ *             examples:
+ *               missingFields:
+ *                 summary: Не указаны обязательные поля
+ *                 value:
+ *                   error: "Inputs required"
+ *               duplicateUser:
+ *                 summary: Пользователь уже существует
+ *                 value:
+ *                   error: "User already exists"
+ *       500:
+ *         description: Внутренняя ошибка сервера
+ *         content:
+ *           application/json:
+ *             example:
+ *               error: "Internal server error"
+ */
+
 
 export default AdminServiceRoute;
