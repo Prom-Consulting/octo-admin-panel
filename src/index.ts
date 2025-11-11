@@ -16,6 +16,7 @@ import OrganizationStaffAuthorizationRouter from "./modules/staff/organizationSt
 import OrganizationStaffRouter from "./modules/staff/organizationStaff.service.ts";
 import AssignmentsBookingServiceRoute from "./modules/booking/assignmentsBooking.service.ts";
 import WorkingDatesServiceRoute from "./modules/staff/workingDates.service.ts";
+import cookieParser from "cookie-parser";
 
 config();
 
@@ -23,7 +24,7 @@ const app = express();
 const PORT = 8000;
 
 app.use(logger);
-// app.use(cors());
+app.use(cookieParser());
 app.use(
   cors({
       origin: [

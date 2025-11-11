@@ -1,11 +1,12 @@
 import type { NextFunction, Request, Response } from "express";
 import { Router } from "express";
-import User, { generateAccessTokenForUser, generateRefreshTokenForUser, JWT_REFRESH_SECRET } from "./User.ts";
+import User, { generateAccessTokenForUser, generateRefreshTokenForUser } from "./User.ts";
 import type { UserToCreate } from "../../types";
 import bcrypt from "bcrypt";
 import Organization, { type OrganizationAttributes } from "../organization/Organization.ts";
 import type { WhereOptions } from "sequelize";
 import jwt from "jsonwebtoken";
+import { JWT_REFRESH_SECRET } from "../../middleware/authStaffMiddleware.ts";
 
 const UserServiceRoute = Router();
 

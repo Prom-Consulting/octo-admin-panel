@@ -1,24 +1,23 @@
 import { Router } from "express";
 import type { Response, Request, NextFunction } from "express";
-import OrganizationStaff, { generateToken } from "./OrganizationStaff.ts";
+import OrganizationStaff, {
+  generateAccessTokenForStaff,
+  generateRefreshTokenForStaff,
+} from "./OrganizationStaff.ts";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import { authenticateToken } from "../../middleware/authStaffMiddleware.ts";
-import { envConfig } from "../../../config/envConfig.ts";
+import { authenticateToken, JWT_REFRESH_SECRET, JWT_SECRET } from "../../middleware/authStaffMiddleware.ts";
 
-const JWT_SECRET = envConfig.JWT_SECRET!;
-// const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET!;
+import type { UserToken } from "../../types";
 
 const OrganizationStaffAuthorizationRouter = Router();
 
-// Авторизация (Login)
 OrganizationStaffAuthorizationRouter.post(
   "/login",
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { email, password } = req.body;
 
-      // Валидация входных данных
       if (!email || !password) {
         return res.status(400).json({
           success: false,
@@ -26,7 +25,6 @@ OrganizationStaffAuthorizationRouter.post(
         });
       }
 
-      // Поиск пользователя
       const staff = await OrganizationStaff.findOne({
         where: { email },
       });
@@ -38,7 +36,6 @@ OrganizationStaffAuthorizationRouter.post(
         });
       }
 
-      // Проверка активности аккаунта
       if (!staff.is_active) {
         return res.status(403).json({
           success: false,
@@ -46,7 +43,6 @@ OrganizationStaffAuthorizationRouter.post(
         });
       }
 
-      // Проверка пароля
       const isPasswordValid = await bcrypt.compare(password, staff.password);
 
       if (!isPasswordValid) {
@@ -56,27 +52,17 @@ OrganizationStaffAuthorizationRouter.post(
         });
       }
 
-      // Генерация токенов
-      const accessToken = generateToken({
-        email,
-        role:staff.role,
-        organizationId:staff.organization.id,
-        organizationName: staff.organization.name
+      const accessToken = generateAccessTokenForStaff(staff);
+      const refreshToken = generateRefreshTokenForStaff(staff);
+      await staff.update({ token: refreshToken });
+
+      res.cookie("refreshToken", refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "strict",
+        maxAge: 7 * 24 * 60 * 60 * 1000,
       });
 
-      const refreshToken = jwt.sign(
-        {
-          email: staff.email,
-          organizationId: staff.organization.id,
-        },
-        envConfig.JWT_SECRET,
-        { expiresIn: "90d" }
-      );
-
-      // Обновление токена в базе
-      await staff.update({ token: accessToken });
-
-      // Подготовка данных для ответа (без пароля)
       const { password: _, email: __, ...staffData } = staff.toJSON();
 
       return res.status(200).json({
@@ -84,7 +70,7 @@ OrganizationStaffAuthorizationRouter.post(
         message: "Login successful",
         data: {
           user: staffData,
-          refreshToken,
+          accessToken,
         },
       });
     } catch (e) {
@@ -94,24 +80,32 @@ OrganizationStaffAuthorizationRouter.post(
   }
 );
 
-// Выход (Logout)
 OrganizationStaffAuthorizationRouter.post(
   "/logout",
-  authenticateToken,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      if (!req.user) {
+      const authHeader = req.headers["authorization"];
+      const token = authHeader && authHeader.split(" ")[1];
+
+      if (!token) {
         return res.status(401).json({
           success: false,
-          message: "Authentication required",
+          message: "Access token is required",
         });
       }
 
-      // Удаляем токен из базы данных
+      const staff = jwt.verify(token, JWT_SECRET) as UserToken;
+
       await OrganizationStaff.update(
         { token: null },
-        { where: { id: req.user.id } }
+        { where: { id: staff.id } }
       );
+
+      res.clearCookie("refreshToken", {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "strict",
+      });
 
       return res.status(200).json({
         success: true,
@@ -124,12 +118,12 @@ OrganizationStaffAuthorizationRouter.post(
   }
 );
 
-// Обновление токена (Refresh Token)
 OrganizationStaffAuthorizationRouter.post(
   "/refresh",
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const refreshToken = req.headers["authorization"];
+      const refreshToken = req.cookies.refreshToken;
+      console.log(refreshToken);
 
       if (!refreshToken) {
         return res.status(400).json({
@@ -138,13 +132,11 @@ OrganizationStaffAuthorizationRouter.post(
         });
       }
 
-      // Верификация refresh токена
-      const decoded = jwt.verify(refreshToken, JWT_SECRET) as {
+      const decoded = jwt.verify(refreshToken, JWT_REFRESH_SECRET) as {
         email: string;
-        organizationId: number;
+        id: number;
       };
 
-      // Поиск пользователя
       const staff = await OrganizationStaff.findOne({
         where: { email: decoded.email },
         attributes: ["id", "email", "role", "organization", "is_active"],
@@ -157,7 +149,6 @@ OrganizationStaffAuthorizationRouter.post(
         });
       }
 
-      // Проверка активности
       if (!staff.is_active) {
         return res.status(403).json({
           success: false,
@@ -165,19 +156,10 @@ OrganizationStaffAuthorizationRouter.post(
         });
       }
 
-      // Генерация нового access токена
-      const newAccessToken = jwt.sign(
-        {
-          email: staff.email,
-          role: staff.role,
-          organizationId: staff.organization.id,
-        },
-        JWT_SECRET,
-        { expiresIn: "30d" }
-      );
+      const newAccessToken = generateAccessTokenForStaff(staff);
+      const newRefreshToken = generateRefreshTokenForStaff(staff);
 
-      // Обновление токена в базе
-      await staff.update({ token: newAccessToken });
+      await staff.update({ token: newRefreshToken });
 
       return res.status(200).json({
         success: true,
@@ -205,7 +187,6 @@ OrganizationStaffAuthorizationRouter.post(
   }
 );
 
-// Получение текущего пользователя (Me)
 OrganizationStaffAuthorizationRouter.get(
   "/me",
   authenticateToken,
@@ -240,7 +221,6 @@ OrganizationStaffAuthorizationRouter.get(
   }
 );
 
-// Смена пароля
 OrganizationStaffAuthorizationRouter.post(
   "/change-password",
   authenticateToken,
@@ -353,7 +333,7 @@ export default OrganizationStaffAuthorizationRouter;
  *                   properties:
  *                     user:
  *                       $ref: '#/components/schemas/OrganizationStaff'
- *                     refreshToken:
+ *                     accessToken:
  *                       type: string
  *       401:
  *         description: Неверный email или пароль

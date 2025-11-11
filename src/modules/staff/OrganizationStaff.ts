@@ -2,7 +2,7 @@ import { DataTypes, Model, type Optional } from "sequelize";
 import { sequelize } from "../../dbConfig/dbConfig.ts";
 import type { OrganizationInfo } from "../../types";
 import jwt from "jsonwebtoken";
-import { envConfig } from "../../../config/envConfig.ts";
+import { JWT_REFRESH_SECRET, JWT_SECRET } from "../../middleware/authStaffMiddleware.ts";
 
 export interface BranchInfo {
   id: number;
@@ -32,13 +32,6 @@ export interface OrganizationStaffAttributes {
   photo_url?: string | null;
   createdAt?: Date;
   updatedAt?: Date;
-}
-
-export interface StaffToken {
-  email: string;
-  role: string;
-  organizationId: number;
-  organizationName: string;
 }
 
 export type OrganizationStaffCreationAttributes = Optional<
@@ -150,12 +143,34 @@ OrganizationStaff.addScope("byBranch", (branchId: number) => ({
   where: sequelize.literal(`branches @> '[{"id": ${branchId}}]'`),
 }));
 
-export const generateToken = ({ email, role, organizationId, organizationName }: StaffToken) => {
+export const generateAccessTokenForStaff = (
+  staff: OrganizationStaffAttributes,
+) => {
   return jwt.sign(
-    { email, role, organizationId, organizationName },
-    envConfig.JWT_SECRET || "default_secret",
-    { expiresIn: "30d" }
+    {
+      id: staff.id,
+      first_name: staff.first_name,
+      last_name: staff.last_name,
+      email: staff.email,
+      role: staff.role,
+      organization_id: staff.organization.id,
+      organization_name: staff.organization.name
+    },
+    JWT_SECRET,
+    { expiresIn: "15d" }
   );
 }
+
+export const generateRefreshTokenForStaff = (staff: OrganizationStaffAttributes) => {
+  return jwt.sign(
+    {
+      id: staff.id,
+      email: staff.email,
+      organization_id: staff.organization.id,
+    },
+    JWT_REFRESH_SECRET,
+    { expiresIn: "7d" }
+  );
+};
 
 export default OrganizationStaff;

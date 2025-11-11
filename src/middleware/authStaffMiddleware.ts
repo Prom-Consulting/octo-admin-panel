@@ -1,10 +1,11 @@
 import type { Response, Request, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import OrganizationStaff from "../modules/staff/OrganizationStaff.ts";
-import { envConfig } from "../../config/envConfig.ts";
 import User from "../modules/user/User.ts";
+import { envConfig } from "../../config/envConfig.ts";
 
-const JWT_SECRET = envConfig.JWT_SECRET!;
+export const JWT_SECRET = envConfig.JWT_SECRET || "default_fallback_secret";
+export const JWT_REFRESH_SECRET = envConfig.JWT_REFRESH_SECRET || "default_fallback_secret";
 
 // Расширяем интерфейс Request для добавления информации о пользователе
 declare global {
@@ -33,6 +34,7 @@ export const authenticateToken = async (
     const authHeader = req.headers["authorization"];
     const token = authHeader && authHeader.split(" ")[1]; // Bearer TOKEN
 
+    console.log(token);
     if (!token) {
       return res.status(401).json({
         success: false,
@@ -42,6 +44,7 @@ export const authenticateToken = async (
 
     // Верифицируем токен
     const decoded = jwt.verify(token, JWT_SECRET) as {
+      id: number;
       first_name: string;
       last_name?: string;
       email: string;
@@ -69,7 +72,7 @@ export const authenticateToken = async (
     }
 
     const staff = await OrganizationStaff.findOne({
-      where: { email: decoded.email, token },
+      where: { email: decoded.email },
       attributes: ['id', 'email', 'role', 'organization', 'is_active', 'first_name', 'last_name'],
     });
 
@@ -98,6 +101,7 @@ export const authenticateToken = async (
 
     next();
   } catch (error) {
+    console.log("Auth middleware error", error);
     if (error instanceof jwt.JsonWebTokenError) {
       return res.status(401).json({
         success: false,
@@ -114,7 +118,6 @@ export const authenticateToken = async (
       success: false,
       message: "Internal server error",
     });
-
   }
 };
 
