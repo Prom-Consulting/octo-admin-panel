@@ -1,18 +1,23 @@
 import type { NextFunction, Request, Response } from "express";
 import { Router } from "express";
-import User from "./User.ts";
-import jwt from "jsonwebtoken";
+import User, { generateAccessTokenForUser, generateRefreshTokenForUser, JWT_REFRESH_SECRET } from "./User.ts";
 import type { UserToCreate } from "../../types";
 import bcrypt from "bcrypt";
-import Organization from "../organization/Organization.ts";
-import { envConfig } from "../../../config/envConfig.ts";
+import Organization, { type OrganizationAttributes } from "../organization/Organization.ts";
+import type { WhereOptions } from "sequelize";
+import jwt from "jsonwebtoken";
 
 const UserServiceRoute = Router();
 
 type UserAuthorization = {
   email: string;
   password: string;
+  organizationName: string;
 };
+
+interface UserToChange extends UserToCreate {
+  password: string;
+}
 
 UserServiceRoute.get(
   "/getUserList",
@@ -34,7 +39,7 @@ UserServiceRoute.post(
   "/auth",
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { email, password }: UserAuthorization = req.body;
+      const { email, password, organizationName }: UserAuthorization = req.body;
 
       if (!email || !password) {
         return res.status(401).send({
@@ -45,8 +50,7 @@ UserServiceRoute.post(
       const user = await User.findOne({
         where: {
           email,
-        },
-        attributes: ["id", "email", "password", "role"],
+        }
       });
 
       if (!user) {
@@ -55,10 +59,15 @@ UserServiceRoute.post(
           message: "Invalid credentials user",
         });
       }
+      const where: WhereOptions<OrganizationAttributes> = {
+        user_id: user.id,
+      };
 
-      const organization = await Organization.findOne({
-        where: { user_id: user.id },
-      });
+      if (organizationName) {
+        where.name = organizationName
+      }
+
+      const organization = await Organization.findOne({ where });
 
       if (!organization) {
         return res
@@ -75,21 +84,21 @@ UserServiceRoute.post(
         });
       }
 
-      const token = jwt.sign(
-        {
-          id: user.id,
-          role: user.role,
-          organizationName: organization.name,
-          email: user.email,
-        },
-        envConfig.JWT_SECRET!,
-        { expiresIn: "7d" } // срок жизни токена
-      );
+      const accessToken = generateAccessTokenForUser(user, organization.name);
+      const refreshToken = generateRefreshTokenForUser(user);
+      user.token = refreshToken;
+
+      res.cookie("refreshToken", refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "strict",
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+      });
 
       return res.status(200).json({
         success: true,
         message: "Success",
-        token,
+        token: accessToken,
         user: {
           id: user.id,
           role: user.role,
@@ -104,9 +113,47 @@ UserServiceRoute.post(
   }
 );
 
-interface UserToChange extends UserToCreate {
-  password: string;
-}
+UserServiceRoute.post(
+  "/refresh",
+  async (req: Request, res: Response) => {
+    try {
+      const refreshToken = req.cookies.refreshToken;
+
+      if (!refreshToken) {
+        return res.status(401).json({ message: "No refresh token provided" });
+      }
+
+      const decoded: any = jwt.verify(refreshToken, JWT_REFRESH_SECRET!);
+      if (!decoded) {
+        return res.status(403).json({ message: "Invalid refresh token" });
+      }
+
+      const user = await User.findByPk(decoded.id);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const organizationName = decoded.organizationName;
+      const organization = await Organization.findOne({
+        where: { name: organizationName },
+      });
+
+      if (!organization) {
+        return res.status(404).json({ message: "Organization not found" });
+      }
+
+      const newAccessToken = generateAccessTokenForUser(user, organization.name);
+
+      return res.json({
+        success: true,
+        accessToken: newAccessToken,
+      });
+    } catch (e) {
+      console.error("Refresh error:", e);
+      return res.status(401).json({ message: "Token refresh failed" });
+    }
+  }
+);
 
 UserServiceRoute.put(
   "/changeUserData/:id",
@@ -188,6 +235,29 @@ UserServiceRoute.delete(
   }
 );
 
+UserServiceRoute.post(
+  "/logout",
+  async (req: Request, res: Response) => {
+    try {
+      // просто очищаем cookie с refreshToken
+      res.clearCookie("refreshToken", {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "strict",
+      });
+
+      return res.status(200).json({
+        success: true,
+        message: "Logged out successfully",
+      });
+    } catch (e) {
+      console.error("Logout error:", e);
+      res.status(500).json({ success: false, message: "Logout failed" });
+    }
+  }
+);
+
+
 export default UserServiceRoute;
 
 /**
@@ -231,10 +301,13 @@ export default UserServiceRoute;
  *             required:
  *               - email
  *               - password
+ *               - organizationName
  *             properties:
  *               email:
  *                 type: string
  *               password:
+ *                 type: string
+ *               organizationName:
  *                 type: string
  *     responses:
  *       200:

@@ -1,6 +1,8 @@
 import { DataTypes, Model, type Optional } from "sequelize";
 import { sequelize } from "../../dbConfig/dbConfig.ts";
 import crypto from "crypto";
+import { envConfig } from "../../../config/envConfig.ts";
+import jwt from "jsonwebtoken";
 
 export interface UserAttributes {
   id: number;
@@ -82,5 +84,34 @@ User.init(
     indexes: [{ unique: true, fields: ["email"] }],
   }
 );
+
+export const JWT_SECRET = envConfig.JWT_SECRET || "default_fallback_secret";
+export const JWT_REFRESH_SECRET = envConfig.JWT_REFRESH_SECRET || "default_fallback_secret";
+
+export const generateAccessTokenForUser = (user: UserCreationAttributes, organizationName: string) => {
+  return jwt.sign(
+    {
+      id: user.id,
+      email: user.email,
+      role: user.role,
+      first_name: user.first_name,
+      last_name: user.last_name,
+      organization_name: organizationName,
+    },
+    JWT_SECRET,
+    { expiresIn: "15m" }
+  );
+};
+
+export const generateRefreshTokenForUser = (user: UserCreationAttributes) => {
+  return jwt.sign(
+    {
+      id: user.id,
+      email: user.email,
+    },
+    JWT_REFRESH_SECRET,
+    { expiresIn: "7d" }
+  );
+};
 
 export default User;

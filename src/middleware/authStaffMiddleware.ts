@@ -12,6 +12,8 @@ declare global {
     interface Request {
       user?: {
         id: number;
+        firstname: string;
+        lastname?: string;
         email: string;
         role: string;
         organizationId?: number | null;
@@ -40,11 +42,14 @@ export const authenticateToken = async (
 
     // Верифицируем токен
     const decoded = jwt.verify(token, JWT_SECRET) as {
+      first_name: string;
+      last_name?: string;
       email: string;
       role: string;
       organizationId?: number;
       organizationName?: string;
     };
+    console.log(decoded);
 
     const user = await User.findOne({
       where: { email: decoded.email },
@@ -54,6 +59,8 @@ export const authenticateToken = async (
     if (user) {
       req.user = {
         id: user.id,
+        firstname: user.first_name,
+        lastname: user.last_name,
         email: user.email,
         role: user.role || 'owner',
         organizationId: null,
@@ -82,6 +89,8 @@ export const authenticateToken = async (
 
     req.user = {
       id: staff.id,
+      firstname: staff.first_name,
+      lastname: staff.last_name,
       email: staff.email,
       role: staff.role,
       organizationId: staff.organization.id,

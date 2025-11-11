@@ -67,3 +67,13 @@ export interface CertificateInfo {
   discount: number;
   expiry_date: Date;
 }
+
+export interface UserToken {
+  id: number;
+  first_name: string;
+  last_name?: string;
+  email: string;
+  role: string;
+  organizationId?: number;
+  organizationName?: string;
+}
