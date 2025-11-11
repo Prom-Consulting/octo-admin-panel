@@ -11,7 +11,7 @@ import {
   authenticateToken,
   authorizeRoles,
   checkOrganizationAccess,
-} from "../../middleware/authStaffMiddleware.ts";
+} from "../../middleware/authUserMiddleware.ts";
 import Organization from "../organization/Organization.ts";
 
 const SALT_ROUNDS = 10;

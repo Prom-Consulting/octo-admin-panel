@@ -2,7 +2,7 @@ import { DataTypes, Model, type Optional } from "sequelize";
 import { sequelize } from "../../dbConfig/dbConfig.ts";
 import crypto from "crypto";
 import jwt from "jsonwebtoken";
-import { JWT_REFRESH_SECRET, JWT_SECRET } from "../../middleware/authStaffMiddleware.ts";
+import { JWT_REFRESH_SECRET, JWT_SECRET } from "../../middleware/authUserMiddleware.ts";
 
 export interface UserAttributes {
   id: number;
@@ -45,29 +45,17 @@ User.init(
       autoIncrement: true,
       primaryKey: true,
     },
-    first_name: {
-      type: DataTypes.STRING(255),
-      allowNull: false,
-    },
-    last_name: {
-      type: DataTypes.STRING(255),
-      allowNull: true,
-    },
-    role: {
-      type: DataTypes.STRING(255),
-      allowNull: false,
-    },
+    first_name: { type: DataTypes.STRING(255), allowNull: false, },
+    last_name: { type: DataTypes.STRING(255), allowNull: true, },
+    role: { type: DataTypes.STRING(255), allowNull: false, },
     email: {
       type: DataTypes.STRING(128),
       allowNull: false,
       unique: true,
     },
-    password: {
-      type: DataTypes.STRING(255),
-      allowNull: false,
-    },
+    password: { type: DataTypes.STRING(255), allowNull: false, },
     token: {
-      type: DataTypes.STRING(128),
+      type: DataTypes.TEXT,
       allowNull: false,
       defaultValue: () => crypto.randomBytes(32).toString("hex"),
     },

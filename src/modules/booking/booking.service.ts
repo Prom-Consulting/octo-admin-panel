@@ -1,7 +1,7 @@
 import { Router } from "express";
 import type { NextFunction, Response, Request } from "express";
 import Organization from "../organization/Organization.ts";
-import { authMiddleware } from "../../middleware/auth.ts";
+import { authMiddleware } from "../../middleware/authAdminMiddleware.ts";
 import jwt from "jsonwebtoken";
 import axios, { AxiosError } from "axios";
 import Branch from "../organization/Branch.ts";

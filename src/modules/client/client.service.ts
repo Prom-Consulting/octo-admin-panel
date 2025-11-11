@@ -28,30 +28,29 @@ ClientServiceRouter.get(
   }
 );
 
-// API для добавления клиента + создание активности клиента
 ClientServiceRouter.post(
   "/",
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const {
-        first_name,
-        last_name,
-        phone_number,
-        branch_id,
+        firstname,
+        lastname,
+        phoneNumber,
+        branchId,
         source,
         password,
         organizationId,
       } = req.body;
 
-      if (!first_name || !phone_number || !branch_id) {
+      if (!firstname || !phoneNumber || !branchId) {
         return res.status(400).json({ message: "Required fields are missing" });
       }
 
       const existingClient = await Client.findOne({
-        where: { phone_number },
+        where: { phone_number: phoneNumber },
       });
 
-      const existingBranch = await Branch.findByPk(branch_id);
+      const existingBranch = await Branch.findByPk(branchId);
       const existingOrg = await Organization.findByPk(organizationId);
 
       if (existingClient) {
@@ -70,9 +69,9 @@ ClientServiceRouter.post(
       const hashedPassword = await bcrypt.hash(password, 10);
 
       const client = await Client.create({
-        first_name,
-        last_name: last_name || null,
-        phone_number: phone_number.trim(),
+        first_name: firstname,
+        last_name: lastname || null,
+        phone_number: phoneNumber.trim(),
         password: hashedPassword,
         source_id,
         is_active: true,

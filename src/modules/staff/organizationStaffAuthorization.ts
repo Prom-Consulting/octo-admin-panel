@@ -6,7 +6,7 @@ import OrganizationStaff, {
 } from "./OrganizationStaff.ts";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import { authenticateToken, JWT_REFRESH_SECRET, JWT_SECRET } from "../../middleware/authStaffMiddleware.ts";
+import { authenticateToken, JWT_REFRESH_SECRET, JWT_SECRET } from "../../middleware/authUserMiddleware.ts";
 
 import type { UserToken } from "../../types";
 
@@ -63,7 +63,7 @@ OrganizationStaffAuthorizationRouter.post(
         maxAge: 7 * 24 * 60 * 60 * 1000,
       });
 
-      const { password: _, email: __, ...staffData } = staff.toJSON();
+      const { password: _, email: __, token: ___, ...staffData } = staff.toJSON();
 
       return res.status(200).json({
         success: true,
@@ -80,7 +80,7 @@ OrganizationStaffAuthorizationRouter.post(
   }
 );
 
-OrganizationStaffAuthorizationRouter.post(
+OrganizationStaffAuthorizationRouter.delete(
   "/logout",
   async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -123,7 +123,6 @@ OrganizationStaffAuthorizationRouter.post(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const refreshToken = req.cookies.refreshToken;
-      console.log(refreshToken);
 
       if (!refreshToken) {
         return res.status(400).json({
@@ -157,9 +156,6 @@ OrganizationStaffAuthorizationRouter.post(
       }
 
       const newAccessToken = generateAccessTokenForStaff(staff);
-      const newRefreshToken = generateRefreshTokenForStaff(staff);
-
-      await staff.update({ token: newRefreshToken });
 
       return res.status(200).json({
         success: true,

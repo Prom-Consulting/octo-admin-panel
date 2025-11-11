@@ -1,14 +1,19 @@
 import { type NextFunction, type Request, type Response, Router } from "express";
-import AdminModel from "./AdminModel.ts";
+import AdminModel, {
+  generateAccessTokenForAdmin,
+  generateRefreshTokenForAdmin,
+} from "./AdminModel.ts";
 import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
+import { JWT_REFRESH_SECRET, JWT_SECRET } from "../../middleware/authUserMiddleware.ts";
 
-const authorizationService = Router();
+const AuthorizationAdminService = Router();
 
-interface adminAuthorization {
-  username: string;
-  password: string;
-  role: "admin";
-}
+// interface adminAuthorization {
+//   email: string;
+//   password: string;
+//   role: "admin";
+// }
 
 interface AuthResponse {
   success: boolean;
@@ -16,7 +21,7 @@ interface AuthResponse {
   token?: string;
   user?: {
     id: number;
-    username: string;
+    email: string;
     role: string;
   };
 }
@@ -63,29 +68,28 @@ interface AuthResponse {
  *               message: "Internal server error"
  */
 
-authorizationService.post(
+AuthorizationAdminService.post(
   "/auth",
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { username, password }: adminAuthorization = req.body;
+      const { email, password } = req.body;
 
-      if (!username || !password) {
+      if (!email || !password) {
         return res.status(401).json({ error: "Username or password required" });
       }
 
-      const user = await AdminModel.findOne({
-        where: { username },
-        attributes: ["id", "username", "password", "role"],
+      const admin = await AdminModel.findOne({
+        where: { email },
       });
 
-      if (!user) {
+      if (!admin) {
         return res.status(401).json({
           success: false,
           message: "Invalid credentials",
         } as AuthResponse);
       }
 
-      const isPasswordValid = await bcrypt.compare(password, user.password);
+      const isPasswordValid = await bcrypt.compare(password, admin.password);
 
       if (!isPasswordValid) {
         return res.status(401).json({
@@ -94,23 +98,103 @@ authorizationService.post(
         } as AuthResponse);
       }
 
+      const accessToken = generateAccessTokenForAdmin(admin);
+      admin.token = generateRefreshTokenForAdmin(admin);
+      await admin.save();
+
       return res.status(200).json({
         success: true,
         message: "Success",
         user: {
-          id: user.id,
-          username: user.username,
-          role: user.role,
+          id: admin.id,
+          username: admin.email,
+          role: admin.role,
+          first_name: admin.first_name,
+          last_name: admin.last_name,
         },
-      } as AuthResponse);
+        access_token: accessToken
+      });
     } catch (e) {
       console.error("Login error:", e);
-      return res.status(500).json({
-        success: false,
-        message: "Internal server error",
-      } as AuthResponse);
+     next(e);
     }
   }
 );
 
-export default authorizationService;
+AuthorizationAdminService.post("/refresh", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const refreshToken = req.cookies.refreshToken;
+
+    if (!refreshToken) {
+      return res.status(400).json({
+        success: false,
+        message: "Refresh token is required",
+      });
+    }
+
+    const decoded = jwt.verify(refreshToken, JWT_REFRESH_SECRET) as {
+      email: string;
+      id: number;
+    };
+
+    const admin = await AdminModel.findOne({
+      where: { email: decoded.email, id: decoded.id },
+    });
+
+    if (!admin) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid refresh token",
+      });
+    }
+
+    const newAccessToken = generateAccessTokenForAdmin(admin);
+    return res.json({
+      success: true,
+      token: newAccessToken,
+    });
+
+  } catch (e) {
+    next(e);
+  }
+});
+
+AuthorizationAdminService.delete("/logout", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const authHeader = req.headers["authorization"];
+    const token = authHeader && authHeader.split(" ")[1];
+
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        message: "Access token is required",
+      });
+    }
+
+    const decoded = jwt.verify(token, JWT_SECRET) as { id: number, email: string };
+    if (!decoded) return res.status(401).json({ success: false, error: "Access token required" });
+
+    const admin = await AdminModel.findOne({
+      where: { id: decoded.id, email: decoded.email },
+    });
+
+    if (!admin) return res.status(400).json({ success: false, message: "Admin not found" });
+
+    await admin.update({ token: null });
+
+    res.clearCookie("refreshToken", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Logout successful",
+    });
+  } catch (e) {
+    next(e);
+  }
+});
+
+export default AuthorizationAdminService;

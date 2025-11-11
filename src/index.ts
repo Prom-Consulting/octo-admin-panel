@@ -5,7 +5,6 @@ import { logger } from "./logger";
 import { dbConnection } from "./db";
 import UserServiceRoute from "./modules/user/user.service.ts";
 import AdminServiceRoute from "./modules/admin/admin.service.ts";
-import authorizationService from "./modules/admin/authorization.service.ts";
 import BranchServiceRoute from "./modules/organization/branch.service.ts";
 import { setupSwagger } from "../swagger.ts";
 import ClientServiceRouter from "./modules/client/client.service.ts";
@@ -17,6 +16,7 @@ import OrganizationStaffRouter from "./modules/staff/organizationStaff.service.t
 import AssignmentsBookingServiceRoute from "./modules/booking/assignmentsBooking.service.ts";
 import WorkingDatesServiceRoute from "./modules/staff/workingDates.service.ts";
 import cookieParser from "cookie-parser";
+import AuthorizationAdminService from "./modules/admin/authorization.service.ts";
 
 config();
 
@@ -48,7 +48,7 @@ app.use("/working-dates", WorkingDatesServiceRoute)
 
 //superadmin routes
 app.use("/admin", AdminServiceRoute);
-app.use("/admin", authorizationService);
+app.use("/admin", AuthorizationAdminService);
 
 // booking routes
 app.use("/booking", BookingRoute);

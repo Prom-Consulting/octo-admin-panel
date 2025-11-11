@@ -30,11 +30,9 @@ export const authenticateToken = async (
   next: NextFunction
 ) => {
   try {
-    // Получаем токен из заголовка Authorization
     const authHeader = req.headers["authorization"];
     const token = authHeader && authHeader.split(" ")[1]; // Bearer TOKEN
 
-    console.log(token);
     if (!token) {
       return res.status(401).json({
         success: false,
@@ -42,7 +40,6 @@ export const authenticateToken = async (
       });
     }
 
-    // Верифицируем токен
     const decoded = jwt.verify(token, JWT_SECRET) as {
       id: number;
       first_name: string;
@@ -52,7 +49,6 @@ export const authenticateToken = async (
       organizationId?: number;
       organizationName?: string;
     };
-    console.log(decoded);
 
     const user = await User.findOne({
       where: { email: decoded.email },
