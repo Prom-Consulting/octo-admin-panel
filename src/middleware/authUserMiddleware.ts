@@ -1,6 +1,6 @@
 import type { Response, Request, NextFunction } from "express";
 import jwt from "jsonwebtoken";
-import OrganizationStaff from "../modules/staff/OrganizationStaff.ts";
+import OrganizationStaff, { type BranchInfo } from "../modules/staff/models/OrganizationStaff.ts";
 import User from "../modules/user/User.ts";
 import { envConfig } from "../../config/envConfig.ts";
 
@@ -18,6 +18,7 @@ declare global {
         email: string;
         role: string;
         organizationId?: number | null;
+        branches?: BranchInfo[] | null;
       };
     }
   }
@@ -52,7 +53,7 @@ export const authenticateToken = async (
 
     const user = await User.findOne({
       where: { email: decoded.email },
-      attributes: ['id', 'email', 'role', 'first_name', 'last_name'],
+      attributes: ["id", "email", "role", "first_name", "last_name"],
     });
 
     if (user) {
@@ -63,26 +64,36 @@ export const authenticateToken = async (
         email: user.email,
         role: user.role,
         organizationId: null,
+        branches: null,
       };
       return next();
     }
 
     const staff = await OrganizationStaff.findOne({
       where: { email: decoded.email },
-      attributes: ['id', 'email', 'role', 'organization', 'is_active', 'first_name', 'last_name'],
+      attributes: [
+        "id",
+        "email",
+        "role",
+        "organization",
+        "branches",
+        "is_active",
+        "first_name",
+        "last_name",
+      ],
     });
 
     if (!staff) {
       return res.status(401).json({
         success: false,
-        message: 'Invalid token or user not found',
+        message: "Invalid token or user not found",
       });
     }
 
     if (!staff.is_active) {
       return res.status(403).json({
         success: false,
-        message: 'Account is deactivated',
+        message: "Account is deactivated",
       });
     }
 
@@ -93,11 +104,13 @@ export const authenticateToken = async (
       email: staff.email,
       role: staff.role,
       organizationId: staff.organization.id,
+      branches: staff.branches
     };
 
     next();
   } catch (error) {
     console.log("Auth middleware error", error);
+
     if (error instanceof jwt.JsonWebTokenError) {
       return res.status(401).json({
         success: false,
@@ -110,6 +123,7 @@ export const authenticateToken = async (
         message: "Token expired",
       });
     }
+
     return res.status(500).json({
       success: false,
       message: "Internal server error",

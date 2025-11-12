@@ -10,12 +10,12 @@ import ClientServiceRouter from "./modules/client/client.service.ts";
 import OrganizationServiceRoute from "./modules/organization/routers/organization.service.ts";
 import BookingRoute from "./modules/booking/booking.service.ts";
 import AssignmentsServiceRoute from "./modules/assignments/assignment.service.ts";
-import OrganizationStaffAuthorizationRouter from "./modules/staff/organizationStaffAuthorization.ts";
-import OrganizationStaffRouter from "./modules/staff/organizationStaff.service.ts";
-import AssignmentsBookingServiceRoute from "./modules/booking/assignmentsBooking.service.ts";
-import WorkingDatesServiceRoute from "./modules/staff/workingDates.service.ts";
 import cookieParser from "cookie-parser";
+import StaffRouter from "./modules/staff/routers";
+import OrganizationStaffAuthorizationRouter from "./modules/staff/routers/auth.service.ts";
+import WorkingDatesServiceRoute from "./modules/staff/workingDates.service.ts";
 import AdminServiceRoute from "./modules/admin/routers";
+import AssignmentsBookingServiceRoute from "./modules/booking/assignmentsBooking.service.ts";
 
 config();
 
@@ -42,7 +42,7 @@ app.use("/clients", ClientServiceRouter);
 app.use("/organizations", OrganizationServiceRoute);
 app.use("/assignments", AssignmentsServiceRoute);
 app.use("/staffAuthorization", OrganizationStaffAuthorizationRouter);
-app.use("/staff", OrganizationStaffRouter);
+app.use("/staff", StaffRouter);
 app.use("/working-dates", WorkingDatesServiceRoute)
 
 //superadmin routes

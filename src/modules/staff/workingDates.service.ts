@@ -1,10 +1,10 @@
 import express, { type Request, type Response, type NextFunction } from "express";
 import { DateTime } from "luxon";
 import { Op, type WhereOptions } from "sequelize";
-import { WorkingDates, type WorkingDatesAttributes } from "./WorkingDates.ts";
+import { WorkingDates, type WorkingDatesAttributes } from "./models/WorkingDates.ts";
 import getDayRange from "../../utils /getDayRange.ts";
 import Branch from "../organization/models/Branch.ts";
-import OrganizationStaff from "./OrganizationStaff.ts";
+import OrganizationStaff from "./models/OrganizationStaff.ts";
 
 const WorkingDatesServiceRoute = express.Router();
 

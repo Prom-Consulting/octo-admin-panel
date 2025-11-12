@@ -1,7 +1,6 @@
 import swaggerJsdoc from "swagger-jsdoc";
 import swaggerUi from "swagger-ui-express";
 import { type Express } from "express";
-import YAML from "yamljs";
 import path from "path";
 
 const options = {
@@ -22,7 +21,7 @@ const options = {
     ],
   },
   // Пути к файлам, где описаны эндпоинты (js/ts с JSDoc-комментами)
-  apis: [path.join(__dirname, "./src/modules/*/*.ts")],
+  apis: [path.join(process.cwd(), "src/modules/**/*.ts")],
 };
 
 const swaggerSpec = swaggerJsdoc(options);

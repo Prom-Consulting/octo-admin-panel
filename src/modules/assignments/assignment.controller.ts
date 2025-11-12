@@ -10,7 +10,7 @@ import Branch from "../organization/models/Branch.ts";
 import getDayRange from "../../utils /getDayRange.ts";
 import Organization from "../organization/models/Organization.ts";
 import Client from "../client/Client.ts";
-import OrganizationStaff from "../staff/OrganizationStaff.ts";
+import OrganizationStaff from "../staff/models/OrganizationStaff.ts";
 import transformPrices from "../../utils /transformPrices.ts";
 import { DateTime } from "luxon";
 import { checkTimeOverlap } from "./checkTimeOverlap.ts";

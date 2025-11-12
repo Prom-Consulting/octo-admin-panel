@@ -1,5 +1,5 @@
 import crypto from "crypto";
-import type { BranchInfo } from "../modules/staff/OrganizationStaff.ts";
+import type { BranchInfo } from "../modules/staff/models/OrganizationStaff.ts";
 import Branch from "../modules/organization/models/Branch.ts";
 
 export async function generatePassword(length = 8) {
