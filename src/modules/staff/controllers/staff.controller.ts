@@ -13,35 +13,12 @@ const SALT_ROUNDS = 10;
 export const getListStaff = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { organizationId, role } = req.query;
-    const user = req.user!;
 
     if (!organizationId || typeof organizationId !== "string") {
       return res.status(400).json({
         success: false,
         message: "organizationId is required",
       });
-    }
-
-    if (user.role === "owner") {
-      const organization = await Organization.findOne({
-        where: { id: organizationId, user_id: user.id },
-      });
-
-      if (!organization) {
-        return res.status(403).json({
-          success: false,
-          message: "Access denied. You don't own this organization",
-        });
-      }
-    }
-
-    if (user.role === "manager") {
-      if (user.organizationId !== Number(organizationId)) {
-        return res.status(403).json({
-          success: false,
-          message: "Access denied. You are not part of this organization",
-        });
-      }
     }
 
     if (role && !ALLOWED_ROLES.includes(role as StaffRole)) {
@@ -81,7 +58,6 @@ export const getStaffByBranch = async (req: Request, res: Response, next: NextFu
   try {
     const { branchId, role } = req.query;
     let { organizationId } = req.query;
-    const user = req.user;
 
     if (!branchId || typeof branchId !== "string") {
       return res.status(400).json({
@@ -90,77 +66,6 @@ export const getStaffByBranch = async (req: Request, res: Response, next: NextFu
       });
     }
 
-    // 🧩 Клиенты (нет пользователя или роли) — видят только активных
-    if (!user || !user.role) {
-      if (!organizationId || typeof organizationId !== "string") {
-        return res.status(400).json({
-          success: false,
-          message: "organizationId is required for public requests",
-        });
-      }
-
-      const whereClause: any = {
-        [Op.and]: [
-          sequelize.literal(`branches @> '[{"id": ${branchId}}]'`),
-          sequelize.literal(`organization @> '{"id": ${organizationId}}'`),
-        ],
-        is_active: true,
-      };
-
-      if (role && typeof role === "string" && ALLOWED_ROLES.includes(role as StaffRole)) {
-        whereClause.role = role as StaffRole;
-      }
-
-      const staff = await OrganizationStaff.findAll({
-        where: whereClause,
-        attributes: { exclude: ["password", "token"] },
-      });
-
-      return res.status(200).json({
-        success: true,
-        data: staff,
-        count: staff.length,
-      });
-    }
-
-    // 🔒 Для владельца — organizationId обязательно
-    if (user.role === "owner") {
-      if (!organizationId || typeof organizationId !== "string") {
-        return res.status(400).json({
-          success: false,
-          message: "organizationId is required for owner",
-        });
-      }
-
-      const organization = await Organization.findOne({
-        where: { id: organizationId, user_id: user.id },
-      });
-
-      if (!organization) {
-        return res.status(403).json({
-          success: false,
-          message: "Access denied. You don't own this organization",
-        });
-      }
-    }
-
-    // 🔒 Для менеджера — organizationId берём из req.user
-    if (user.role === "manager") {
-      organizationId = String(user.organizationId);
-
-      const isInBranch = user.branches?.some(
-        (b: any) => Number(b.id) === Number(branchId)
-      );
-
-      if (!isInBranch) {
-        return res.status(403).json({
-          success: false,
-          message: "Access denied. You are not assigned to this branch",
-        });
-      }
-    }
-
-    // Проверка корректности роли
     if (role && !ALLOWED_ROLES.includes(role as StaffRole)) {
       return res.status(422).json({
         success: false,
@@ -168,7 +73,6 @@ export const getStaffByBranch = async (req: Request, res: Response, next: NextFu
       });
     }
 
-    // 🔍 Основной запрос
     const whereClause: any = {
       [Op.and]: [
         sequelize.literal(`branches @> '[{"id": ${branchId}}]'`),

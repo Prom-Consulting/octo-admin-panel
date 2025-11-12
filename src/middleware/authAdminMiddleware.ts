@@ -64,10 +64,10 @@ export const authAdminMiddleware = async (req: Request, res: Response, next: Nex
       firstname: admin.first_name,
       lastname: admin.last_name,
       email: admin.email,
-      role: admin.role || 'owner',
+      role: admin.role,
     };
 
-    next();
+    return next();
   } catch (err) {
     return res.status(401).json({ message: "Invalid or expired token" });
   }

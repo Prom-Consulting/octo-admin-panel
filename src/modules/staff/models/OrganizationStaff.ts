@@ -157,7 +157,7 @@ export const generateAccessTokenForStaff = (
       organization_name: staff.organization.name
     },
     JWT_SECRET,
-    { expiresIn: "15d" }
+    { expiresIn: "15m" }
   );
 }
 

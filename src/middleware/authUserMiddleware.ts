@@ -3,6 +3,7 @@ import jwt from "jsonwebtoken";
 import OrganizationStaff, { type BranchInfo } from "../modules/staff/models/OrganizationStaff.ts";
 import User from "../modules/user/User.ts";
 import { envConfig } from "../../config/envConfig.ts";
+import type { BranchAttributes } from "../modules/organization/models/Branch.ts";
 
 export const JWT_SECRET = envConfig.JWT_SECRET || "default_fallback_secret";
 export const JWT_REFRESH_SECRET = envConfig.JWT_REFRESH_SECRET || "default_fallback_secret";
@@ -20,6 +21,7 @@ declare global {
         organizationId?: number | null;
         branches?: BranchInfo[] | null;
       };
+      branch?: BranchAttributes;
     }
   }
 }

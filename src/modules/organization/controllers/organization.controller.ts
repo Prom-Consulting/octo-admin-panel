@@ -42,12 +42,12 @@ export const getOrganizationByID = async (
   next: NextFunction
 ) => {
   try {
-    const { id } = req.params;
+    const { organizationId } = req.params;
     const user = req.user;
 
     if (!user) return res.status(401).json({ error: "Not authorized" });
 
-    const organization = await Organization.findByPk(id);
+    const organization = await Organization.findByPk(organizationId);
     if (!organization) {
       return res.status(404).send({ error: "Organization not found" });
     }

@@ -1,13 +1,16 @@
 import express from "express";
 import { getListOrganizations, getOrganizationByID } from "../controllers/organization.controller.ts";
 import { authenticateToken, authorizeRoles } from "../../../middleware/authUserMiddleware.ts";
+import { checkOrganizationMiddleware } from "../../../middleware/checkOrganizationMiddleware.ts";
 
 const OrganizationServiceRoute = express.Router();
-OrganizationServiceRoute.use(authenticateToken, authorizeRoles("owner"));
+OrganizationServiceRoute.use(
+  authenticateToken,
+  authorizeRoles("owner"),
+);
 
-OrganizationServiceRoute.get("/", getListOrganizations);
-
-OrganizationServiceRoute.get("/:id", getOrganizationByID);
+OrganizationServiceRoute.get("/", checkOrganizationMiddleware, getListOrganizations);
+OrganizationServiceRoute.get("/:organizationId", checkOrganizationMiddleware, getOrganizationByID);
 
 export default OrganizationServiceRoute;
 
@@ -22,7 +25,7 @@ export default OrganizationServiceRoute;
  * @swagger
  * /organizations/:
  *   get:
- *     summary: Получить список организаций. Доступен лишь владельцу/клиенту. Владелец может видеть лишь свои организации, а клиент только активные
+ *     summary: Получить список организаций. Доступен лишь владельцу. Владелец может видеть лишь свои организации
  *     tags: [Organizations]
  *     parameters:
  *       - in: query

@@ -1,7 +1,6 @@
 import { Router } from "express";
 import {
   authorizeRoles,
-  checkOrganizationAccess,
 } from "../../../middleware/authUserMiddleware";
 import {
   activateStaff, addBranchToStaff,
@@ -11,34 +10,65 @@ import {
   getStaffByBranch, patchStaff, removeBranchFromStaff,
   updateStaff,
 } from "../controllers/staff.controller.ts";
+import { checkBranchMiddleware, checkOrganizationMiddleware } from "../../../middleware/checkOrganizationMiddleware.ts";
 
 const OrganizationStaffRouter = Router();
 
-OrganizationStaffRouter.get("/", authorizeRoles( "owner"), checkOrganizationAccess, getListStaff);
-OrganizationStaffRouter.patch("/:id", patchStaff);
+OrganizationStaffRouter.get("/",
+  authorizeRoles( "owner"),
+  getListStaff
+);
 
+OrganizationStaffRouter.patch("/:id", checkOrganizationMiddleware, patchStaff);
 
 OrganizationStaffRouter.use(authorizeRoles("manager", "owner"));
 
-OrganizationStaffRouter.get("/byBranch", checkOrganizationAccess, getStaffByBranch);
-OrganizationStaffRouter.post("/", createStaff);
-OrganizationStaffRouter.put("/:id", updateStaff);
-OrganizationStaffRouter.delete("/:id", deleteStaff);
-OrganizationStaffRouter.patch("/:id/de-activate", activateStaff);
-OrganizationStaffRouter.post("/:id/branches", addBranchToStaff);
-OrganizationStaffRouter.delete("/:id/branches/:branchId", removeBranchFromStaff);
+OrganizationStaffRouter.get("/byBranch",
+  checkOrganizationMiddleware,
+  checkBranchMiddleware,
+  getStaffByBranch
+);
+OrganizationStaffRouter.post("/",
+  checkOrganizationMiddleware,
+  createStaff
+);
+
+OrganizationStaffRouter.put("/:id",
+  checkOrganizationMiddleware,
+  updateStaff
+);
+
+OrganizationStaffRouter.delete("/:id",
+  checkOrganizationMiddleware,
+  deleteStaff
+);
+
+OrganizationStaffRouter.patch("/:id/de-activate",
+  checkOrganizationMiddleware,
+  activateStaff
+);
+
+OrganizationStaffRouter.post("/:id/branches",
+  checkOrganizationMiddleware,
+  addBranchToStaff
+);
+
+OrganizationStaffRouter.delete("/:id/branches/:branchId",
+  checkOrganizationMiddleware,
+  removeBranchFromStaff
+);
 
 export default OrganizationStaffRouter;
 
 /**
- * @swagger
+ * @openapi
  * tags:
  *   name: OrganizationStaff
  *   description: Управление сотрудниками организации
  */
 
 /**
- * @swagger
+ * @openapi
  * components:
  *   schemas:
  *     OrganizationStaff:
@@ -48,13 +78,24 @@ export default OrganizationStaffRouter;
  *           type: integer
  *         organization:
  *           type: object
- *           description: Сведения об организации сотрудника
+ *           description: Данные об организации, в которой работает сотрудник
+ *           properties:
+ *             id:
+ *               type: integer
+ *             name:
+ *               type: string
  *         branches:
  *           type: array
- *           description: Массив филиалов сотрудника
+ *           description: Список филиалов сотрудника
  *           items:
  *             type: object
- *             description: Сведения о филиале
+ *             properties:
+ *               id:
+ *                 type: integer
+ *               name:
+ *                 type: string
+ *               address:
+ *                 type: string
  *         username:
  *           type: string
  *           nullable: true
@@ -87,14 +128,26 @@ export default OrganizationStaffRouter;
  *         updatedAt:
  *           type: string
  *           format: date-time
+ *
+ *   responses:
+ *     UnauthorizedError:
+ *       description: Нет доступа. Пользователь не авторизован или не имеет прав.
+ *     NotFoundError:
+ *       description: Запрашиваемый сотрудник не найден.
+ *     ValidationError:
+ *       description: Ошибка валидации. Одно из обязательных полей отсутствует или неверно.
+ *     ConflictError:
+ *       description: Конфликт данных. Пользователь с указанным email уже существует.
  */
 
 /**
- * @swagger
+ * @openapi
  * /staff:
  *   get:
  *     summary: Получить список сотрудников организации
  *     tags: [OrganizationStaff]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: query
  *         name: organizationId
@@ -109,7 +162,7 @@ export default OrganizationStaffRouter;
  *           enum: [manager, employee]
  *     responses:
  *       200:
- *         description: Список сотрудников
+ *         description: Успешное получение списка сотрудников
  *         content:
  *           application/json:
  *             schema:
@@ -123,14 +176,20 @@ export default OrganizationStaffRouter;
  *                   type: array
  *                   items:
  *                     $ref: '#/components/schemas/OrganizationStaff'
+ *       400:
+ *         $ref: '#/components/responses/ValidationError'
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
  */
 
 /**
- * @swagger
+ * @openapi
  * /staff/byBranch:
  *   get:
  *     summary: Получить сотрудников по филиалу
  *     tags: [OrganizationStaff]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: query
  *         name: organizationId
@@ -151,33 +210,27 @@ export default OrganizationStaffRouter;
  *     responses:
  *       200:
  *         description: Список сотрудников по филиалу
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 count:
- *                   type: integer
- *                 data:
- *                   type: array
- *                   items:
- *                     $ref: '#/components/schemas/OrganizationStaff'
+ *       400:
+ *         $ref: '#/components/responses/ValidationError'
+ *       422:
+ *         description: Некорректная роль.
  */
 
 /**
- * @swagger
+ * @openapi
  * /staff:
  *   post:
  *     summary: Создать нового сотрудника
  *     tags: [OrganizationStaff]
+ *     security:
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
  *             type: object
+ *             required: [organizationId, firstname, lastname, password, email]
  *             properties:
  *               organizationId:
  *                 type: number
@@ -210,26 +263,21 @@ export default OrganizationStaffRouter;
  *                 type: string
  *     responses:
  *       201:
- *         description: Сотрудник создан
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 message:
- *                   type: string
- *                 data:
- *                   $ref: '#/components/schemas/OrganizationStaff'
+ *         description: Сотрудник успешно создан
+ *       400:
+ *         $ref: '#/components/responses/ValidationError'
+ *       409:
+ *         $ref: '#/components/responses/ConflictError'
  */
 
 /**
- * @swagger
+ * @openapi
  * /staff/{id}:
  *   put:
- *     summary: Обновить сотрудника полностью
+ *     summary: Полное обновление данных сотрудника
  *     tags: [OrganizationStaff]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -243,59 +291,44 @@ export default OrganizationStaffRouter;
  *             $ref: '#/components/schemas/OrganizationStaff'
  *     responses:
  *       200:
- *         description: Сотрудник обновлен
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 message:
- *                   type: string
- *                 data:
- *                   $ref: '#/components/schemas/OrganizationStaff'
+ *         description: Сотрудник обновлён
+ *       404:
+ *         $ref: '#/components/responses/NotFoundError'
  */
 
 /**
- * @swagger
+ * @openapi
  * /staff/{id}:
  *   patch:
- *     summary: Частичное обновление сотрудника
+ *     summary: Частичное обновление данных сотрудника (доступно менеджеру или самому пользователю)
  *     tags: [OrganizationStaff]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
  *         required: true
  *         schema:
  *           type: integer
- *     requestBody:
- *       content:
- *         application/json:
- *           schema:
- *             type: object
  *     responses:
  *       200:
- *         description: Сотрудник обновлен
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 message:
- *                   type: string
- *                 data:
- *                   $ref: '#/components/schemas/OrganizationStaff'
+ *         description: Сотрудник обновлён
+ *       403:
+ *         description: Недостаточно прав для изменения данных
+ *       404:
+ *         $ref: '#/components/responses/NotFoundError'
+ *       409:
+ *         $ref: '#/components/responses/ConflictError'
  */
 
 /**
- * @swagger
+ * @openapi
  * /staff/{id}:
  *   delete:
- *     summary: Удалить сотрудника
+ *     summary: Удалить сотрудника (только для менеджера или владельца)
  *     tags: [OrganizationStaff]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -304,111 +337,86 @@ export default OrganizationStaffRouter;
  *           type: integer
  *     responses:
  *       200:
- *         description: Сотрудник удален
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 message:
- *                   type: string
+ *         description: Сотрудник удалён
+ *       404:
+ *         $ref: '#/components/responses/NotFoundError'
  */
 
 /**
- * @swagger
+ * @openapi
  * /staff/{id}/de-activate:
  *   patch:
  *     summary: Активировать или деактивировать сотрудника
  *     tags: [OrganizationStaff]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
- *         required: true
  *         schema:
  *           type: integer
+ *         required: true
  *     responses:
  *       200:
- *         description: Сотрудник активирован/деактивирован
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 message:
- *                   type: string
- *                 data:
- *                   $ref: '#/components/schemas/OrganizationStaff'
+ *         description: Статус активности сотрудника изменён
  */
 
 /**
- * @swagger
+ * @openapi
  * /staff/{id}/branches:
  *   post:
  *     summary: Добавить сотрудника к филиалу
  *     tags: [OrganizationStaff]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
- *         required: true
  *         schema:
  *           type: integer
+ *         required: true
  *     requestBody:
  *       content:
  *         application/json:
  *           schema:
  *             type: object
+ *             required: [branchId]
  *             properties:
  *               branchId:
  *                 type: integer
  *     responses:
  *       200:
- *         description: Филиал добавлен
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 message:
- *                   type: string
- *                 data:
- *                   $ref: '#/components/schemas/OrganizationStaff'
+ *         description: Сотрудник успешно добавлен в филиал
+ *       400:
+ *         description: branchId отсутствует или некорректен
+ *       404:
+ *         description: Сотрудник или филиал не найден
  */
 
 /**
- * @swagger
+ * @openapi
  * /staff/{id}/branches/{branchId}:
  *   delete:
  *     summary: Удалить сотрудника из филиала
  *     tags: [OrganizationStaff]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
- *         required: true
  *         schema:
  *           type: integer
+ *         required: true
  *       - in: path
  *         name: branchId
- *         required: true
  *         schema:
  *           type: integer
+ *         required: true
  *     responses:
  *       200:
- *         description: Филиал удален
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 message:
- *                   type: string
- *                 data:
- *                   $ref: '#/components/schemas/OrganizationStaff'
+ *         description: Филиал успешно удалён у сотрудника
+ *       400:
+ *         description: Нельзя удалить последний филиал
+ *       404:
+ *         description: Сотрудник или филиал не найден
  */

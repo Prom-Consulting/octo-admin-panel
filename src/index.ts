@@ -13,7 +13,7 @@ import AssignmentsServiceRoute from "./modules/assignments/assignment.service.ts
 import cookieParser from "cookie-parser";
 import StaffRouter from "./modules/staff/routers";
 import OrganizationStaffAuthorizationRouter from "./modules/staff/routers/auth.service.ts";
-import WorkingDatesServiceRoute from "./modules/staff/workingDates.service.ts";
+import WorkingDatesServiceRoute from "./modules/staff/routers/workingDates.service.ts";
 import AdminServiceRoute from "./modules/admin/routers";
 import AssignmentsBookingServiceRoute from "./modules/booking/assignmentsBooking.service.ts";
 
@@ -53,6 +53,13 @@ app.use("/booking", BookingRoute);
 app.use("/booking", AssignmentsBookingServiceRoute);
 
 setupSwagger(app);
+
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    message: `Route ${req.method} ${req.originalUrl} not found`,
+  });
+});
 
 const run = async () => {
   await dbConnection();

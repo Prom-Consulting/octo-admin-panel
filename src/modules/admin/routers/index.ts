@@ -47,7 +47,7 @@ AdminServiceRoute.post(
   }
 );
 
-AdminOrganizations.use(authAdminMiddleware);
+AdminServiceRoute.use(authAdminMiddleware);
 AdminServiceRoute.use("/organizations", AdminOrganizations);
 AdminServiceRoute.use("/branches", AdminBranchesService);
 

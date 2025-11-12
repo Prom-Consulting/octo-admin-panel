@@ -7,62 +7,96 @@ import {
   updateBranch,
 } from "../controllers/branch.controllers.ts";
 import { authenticateToken, authorizeRoles } from "../../../middleware/authUserMiddleware.ts";
+import { checkBranchMiddleware, checkOrganizationMiddleware } from "../../../middleware/checkOrganizationMiddleware.ts";
 
 const BranchServiceRoute = express.Router();
 
-BranchServiceRoute.use(authenticateToken, authorizeRoles("owner"));
+BranchServiceRoute.use(authenticateToken, checkOrganizationMiddleware); //middleware
 
-BranchServiceRoute.get("/", getBranches);
-BranchServiceRoute.get("/:id", getBranchById);
-BranchServiceRoute.post("/", createBranch);
-BranchServiceRoute.patch("/:id", updateBranch);
-BranchServiceRoute.patch("/:id/deactivate", deactivateBranch);
+BranchServiceRoute.get("/",
+  authorizeRoles("owner", "manager"), //middleware
+  getBranches                                      // route
+);
+
+BranchServiceRoute.get("/:branchId",
+  authorizeRoles("owner", "manager"), checkBranchMiddleware,
+  getBranchById
+);
+
+BranchServiceRoute.post("/",
+  authorizeRoles("owner"),
+  createBranch
+);
+
+BranchServiceRoute.patch("/:branchId",
+  authorizeRoles("owner"), checkBranchMiddleware,
+  updateBranch
+);
+BranchServiceRoute.patch("/:branchId/deactivate",
+  authorizeRoles("owner"), checkBranchMiddleware,
+  deactivateBranch
+);
 
 export default BranchServiceRoute;
 
 /**
  * @openapi
+ * tags:
+ *   - name: Branch
+ *     description: Управление филиалами организации (только для владельцев и менеджеров)
+ */
+
+/**
+ * @openapi
  * /branches:
  *   get:
- *     summary: Получить список филиалов
- *     tags:
- *       - Branch
+ *     summary: Получить список филиалов организации
+ *     tags: [Branch]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: query
- *         name: owner
+ *         name: organizationId
  *         schema:
  *           type: integer
- *         description: ID владельца для фильтрации
+ *         description: ID организации (для фильтрации, обязательно для admin)
  *     responses:
  *       200:
- *         description: Список филиалов
+ *         description: Список филиалов успешно получен
  *         content:
  *           application/json:
  *             example:
  *               - id: 1
  *                 organization_id: 2
  *                 name: "Main Office"
- *                 phone: "+123456789"
+ *                 phone: "+996700000001"
  *                 address: "ул. Ленина, 1"
  *                 timezone: "Asia/Bishkek"
+ *                 isActive: true
  *               - id: 2
  *                 organization_id: 2
  *                 name: "Branch 2"
- *                 phone: "+987654321"
+ *                 phone: "+996700000002"
  *                 address: "ул. Советская, 5"
  *                 timezone: "Asia/Bishkek"
+ *                 isActive: true
+ *       401:
+ *         description: Не авторизован — требуется токен
+ *       403:
+ *         description: Доступ запрещён — роль не имеет прав
  */
 
 /**
  * @openapi
- * /branches/{id}:
+ * /branches/{branchId}:
  *   get:
- *     summary: Получить филиал по ID
- *     tags:
- *       - Branch
+ *     summary: Получить информацию о филиале по ID
+ *     tags: [Branch]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
- *         name: id
+ *         name: branchId
  *         required: true
  *         schema:
  *           type: integer
@@ -76,33 +110,58 @@ export default BranchServiceRoute;
  *               id: 1
  *               organization_id: 2
  *               name: "Main Office"
- *               phone: "+123456789"
+ *               phone: "+996700000001"
  *               address: "ул. Ленина, 1"
  *               timezone: "Asia/Bishkek"
+ *               isActive: true
+ *       401:
+ *         description: Не авторизован
+ *       403:
+ *         description: Доступ запрещён (например, сотрудник не привязан к филиалу)
  *       404:
- *         description: Branch not found
+ *         description: Филиал не найден
  */
 
 /**
  * @openapi
  * /branches:
  *   post:
- *     summary: Создать филиал
- *     tags:
- *       - Branch
+ *     summary: Создать новый филиал. Только для владельцев (owner)
+ *     tags: [Branch]
+ *     security:
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - organizationId
+ *               - name
+ *               - phone
+ *               - address
+ *               - timezone
+ *             properties:
+ *               organizationId:
+ *                 type: integer
+ *               name:
+ *                 type: string
+ *               phone:
+ *                 type: string
+ *               address:
+ *                 type: string
+ *               timezone:
+ *                 type: string
  *           example:
  *             organizationId: 2
  *             name: "New Branch"
- *             phone: "+777777777"
+ *             phone: "+996700000003"
  *             address: "ул. Победы, 10"
  *             timezone: "Asia/Bishkek"
  *     responses:
  *       200:
- *         description: Branch created
+ *         description: Филиал успешно создан (только владелец)
  *         content:
  *           application/json:
  *             example:
@@ -111,23 +170,28 @@ export default BranchServiceRoute;
  *                 id: 3
  *                 organization_id: 2
  *                 name: "New Branch"
- *                 phone: "+777777777"
+ *                 phone: "+996700000003"
  *                 address: "ул. Победы, 10"
  *                 timezone: "Asia/Bishkek"
  *       400:
- *         description: Ошибка валидации
+ *         description: Ошибка валидации или превышен лимит филиалов
+ *       401:
+ *         description: Не авторизован
+ *       403:
+ *         description: Только владелец может создавать филиалы
  */
 
 /**
  * @openapi
- * /branches/{id}:
+ * /branches/{branchId}:
  *   patch:
- *     summary: Обновить филиал
- *     tags:
- *       - Branch
+ *     summary: Обновить информацию о филиале. Только для владельцев (owner)
+ *     tags: [Branch]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
- *         name: id
+ *         name: branchId
  *         required: true
  *         schema:
  *           type: integer
@@ -136,14 +200,25 @@ export default BranchServiceRoute;
  *       required: true
  *       content:
  *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *               phone:
+ *                 type: string
+ *               address:
+ *                 type: string
+ *               isActive:
+ *                 type: boolean
  *           example:
  *             name: "Updated Branch"
- *             phone: "+111111111"
+ *             phone: "+996700000004"
  *             address: "ул. Гагарина, 25"
- *             timezone: "Asia/Bishkek"
+ *             isActive: false
  *     responses:
  *       200:
- *         description: Branch обновлён
+ *         description: Филиал успешно обновлён
  *         content:
  *           application/json:
  *             example:
@@ -152,36 +227,46 @@ export default BranchServiceRoute;
  *                 id: 1
  *                 organization_id: 2
  *                 name: "Updated Branch"
- *                 phone: "+111111111"
+ *                 phone: "+996700000004"
  *                 address: "ул. Гагарина, 25"
  *                 timezone: "Asia/Bishkek"
+ *                 isActive: false
+ *       401:
+ *         description: Не авторизован
+ *       403:
+ *         description: Недостаточно прав (например, менеджеры не могут изменять филиалы)
  *       404:
- *         description: Branch not found
+ *         description: Филиал не найден
  */
 
 /**
  * @openapi
- * /branches/{id}/deactivate:
+ * /branches/{branchId}/deactivate:
  *   patch:
- *     summary: Деактивировать филиал
- *     tags:
- *       - Branch
+ *     summary: Деактивировать филиал. Только для владельцев (owner)
+ *     tags: [Branch]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
- *         name: id
+ *         name: branchId
  *         required: true
  *         schema:
  *           type: integer
  *         description: ID филиала
  *     responses:
  *       200:
- *         description: Филиал деактивирован
+ *         description: Филиал успешно деактивирован
  *         content:
  *           application/json:
  *             example:
  *               message: "You have deactivated the branch: Main Office"
- *       404:
- *         description: Branch not found
+ *       400:
+ *         description: Филиал уже деактивирован
  *       401:
- *         description: Permission denied
+ *         description: Не авторизован
+ *       403:
+ *         description: Доступ запрещён (только владелец)
+ *       404:
+ *         description: Филиал не найден
  */

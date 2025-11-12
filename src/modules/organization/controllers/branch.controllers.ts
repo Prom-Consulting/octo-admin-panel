@@ -23,6 +23,11 @@ export const getBranches = async (req: Request, res: Response, next: NextFunctio
       if (!organizationIds.length) return res.status(200).send([]);
       where.organization_id = organizationIds;
 
+    } else if (user.role === "manager" || user.role === "employee") {
+      const branchIds = user.branches?.map((b: any) => b.id);
+      console.log(branchIds);
+      if (!branchIds?.length) return res.status(200).send([]);
+      where.id = branchIds;
     } else {
       where.isActive = true;
     }
@@ -38,9 +43,9 @@ export const getBranches = async (req: Request, res: Response, next: NextFunctio
 
 export const getBranchById = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { id } = req.params;
+    const { branchId } = req.params;
     const user = req.user;
-    const branch = await Branch.findByPk(id);
+    const branch = await Branch.findByPk(branchId);
 
     if (!user) return res.status(401).json({ error: "Not authorized" });
     if (!branch) return res.status(404).send({ error: "Branch not found" });
@@ -72,9 +77,6 @@ export const getBranchById = async (req: Request, res: Response, next: NextFunct
 export const createBranch = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { organizationId, name, phone, address, timezone } = req.body;
-    const user = req.user;
-
-    if (!user) return res.status(401).json({ error: "Not authorized" });
 
     if (!organizationId || !name || !phone || !address || !timezone) {
       return res
@@ -85,10 +87,6 @@ export const createBranch = async (req: Request, res: Response, next: NextFuncti
     const organization = await Organization.findByPk(organizationId);
 
     if (!organization) return res.status(400).send({ error: "Organization not found" });
-
-    if (user.role === "owner" && organization.user_id !== user.id) {
-      return res.status(403).send({ error: "Access denied" });
-    }
 
     const branches = await Branch.findAll({ where: { organization_id: organizationId } });
     const branchLimit = organization.branches ?? 1;
@@ -116,13 +114,13 @@ export const createBranch = async (req: Request, res: Response, next: NextFuncti
 
 export const updateBranch = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { id } = req.params;
+    const { branchId } = req.params;
     const { name, phone, address, isActive } = req.body;
     const user = req.user;
 
     if (!user) return res.status(401).json({ error: "Not authorized" });
 
-    const branch = await Branch.findByPk(id);
+    const branch = await Branch.findByPk(branchId);
     if (!branch) return res.status(404).send({ error: "Branch not found" });
 
     const organization = await Organization.findByPk(branch.organization_id);
@@ -162,19 +160,13 @@ export const updateBranch = async (req: Request, res: Response, next: NextFuncti
 
 export const deactivateBranch = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { id } = req.params;
+    const { branchId } = req.params;
     const user = req.user;
 
     if (!user) return res.status(401).json({ error: "Not authorized" });
 
-    const branch = await Branch.findByPk(id);
+    const branch = await Branch.findByPk(branchId);
     if (!branch) return res.status(404).send({ error: "Branch not found" });
-
-    const organization = await Organization.findByPk(branch.organization_id);
-
-    if (user.role !== "owner" || !organization || organization.user_id !== user.id) {
-      return res.status(403).send({ error: "Access denied" });
-    }
 
     if (!branch.isActive) {
       return res.status(400).send({ message: "Branch already deactivated" });
