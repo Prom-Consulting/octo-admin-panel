@@ -1,6 +1,6 @@
 import type { NextFunction, Request, Response } from "express";
 import type { WhereOptions } from "sequelize";
-import Organization from "../model/Organization.ts";
+import Organization from "../models/Organization.ts";
 import User from "../../user/User.ts";
 import { createClientDatabase } from "../../../methods/octo_database.ts";
 import type { OrganizationCreate } from "../../../types";
@@ -19,12 +19,17 @@ export const getListOrganizations = async (
 
     if (user.role === "admin") {
       if (ownerId) where.user_id = Number(ownerId);
+
     } else if (user.role === "owner") {
       where.user_id = user.id;
+
+    } else {
+      where.isActive = true;
     }
 
     const organizationList = await Organization.findAll({ where });
-    res.send(organizationList);
+    return res.send(organizationList);
+
   } catch (e) {
     console.log("Get organization error", e);
     next(e);
@@ -39,20 +44,31 @@ export const getOrganizationByID = async (
   try {
     const { id } = req.params;
     const user = req.user;
+
     if (!user) return res.status(401).json({ error: "Not authorized" });
 
     const organization = await Organization.findByPk(id);
-
     if (!organization) {
       return res.status(404).send({ error: "Organization not found" });
     }
 
-
-    if (user.role !== "admin" && organization.user_id !== user.id) {
-      return res.status(403).send({ error: "Access denied" });
+    if (user.role === "admin") {
+      return res.send(organization);
     }
 
-    res.send(organization);
+    if (user.role === "owner") {
+      if (organization.user_id !== user.id) {
+        return res.status(403).send({ error: "Access denied" });
+      }
+      return res.send(organization);
+    }
+
+    if (organization.isActive) {
+      return res.send(organization);
+    } else {
+      return res.status(403).send({ error: "Organization not active" });
+    }
+
   } catch (e) {
     console.log("Get by id organization error", e);
     next(e);

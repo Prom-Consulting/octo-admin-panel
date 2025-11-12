@@ -6,9 +6,9 @@ import Assignment, {
   ASSIGNMENT_STATUSES,
   type AssignmentAttributes,
 } from "./Assignment.ts";
-import Branch from "../organization/model/Branch.ts";
+import Branch from "../organization/models/Branch.ts";
 import getDayRange from "../../utils /getDayRange.ts";
-import Organization from "../organization/model/Organization.ts";
+import Organization from "../organization/models/Organization.ts";
 import Client from "../client/Client.ts";
 import OrganizationStaff from "../staff/OrganizationStaff.ts";
 import transformPrices from "../../utils /transformPrices.ts";

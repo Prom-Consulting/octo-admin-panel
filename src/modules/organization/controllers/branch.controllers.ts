@@ -1,7 +1,7 @@
 import type { NextFunction, Request, Response } from "express";
 import type { WhereOptions } from "sequelize";
-import Branch from "../model/Branch.ts";
-import Organization from "../model/Organization.ts";
+import Branch from "../models/Branch.ts";
+import Organization from "../models/Organization.ts";
 
 export const getBranches = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -13,18 +13,23 @@ export const getBranches = async (req: Request, res: Response, next: NextFunctio
 
     if (user.role === "admin") {
       if (organizationId) where.organization_id = Number(organizationId);
+
     } else if (user.role === "owner") {
       const organizations = await Organization.findAll({
         where: { user_id: user.id },
       });
       const organizationIds = organizations.map((o) => o.id);
-      if (!organizationIds.length)
-        return res.status(200).send([]);
+
+      if (!organizationIds.length) return res.status(200).send([]);
       where.organization_id = organizationIds;
+
+    } else {
+      where.isActive = true;
     }
 
     const listBranches = await Branch.findAll({ where });
     return res.send(listBranches);
+
   } catch (e) {
     console.log("Get branch error", e);
     next(e);
@@ -40,14 +45,24 @@ export const getBranchById = async (req: Request, res: Response, next: NextFunct
     if (!user) return res.status(401).json({ error: "Not authorized" });
     if (!branch) return res.status(404).send({ error: "Branch not found" });
 
-    if (user.role !== "admin") {
+    if (user.role === "admin") {
+      return res.send(branch);
+    }
+
+    if (user.role === "owner") {
       const organization = await Organization.findByPk(branch.organization_id);
       if (!organization || organization.user_id !== user.id) {
         return res.status(403).send({ error: "Access denied" });
       }
+      return res.send(branch);
     }
 
-    return res.send(branch);
+    if (branch.isActive) {
+      return res.send(branch);
+    } else {
+      return res.status(403).send({ error: "Branch not active" });
+    }
+
   } catch (e) {
     console.log("Get by id branch error", e);
     next(e);

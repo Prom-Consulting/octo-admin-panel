@@ -6,13 +6,13 @@ import { Op } from "sequelize";
 import { ALLOWED_ROLES, type StaffRole } from "../../constants/roles.ts";
 import bcrypt from "bcrypt";
 import { validateBranches } from "../../methods/methods.ts";
-import Branch from "../organization/model/Branch.ts";
+import Branch from "../organization/models/Branch.ts";
 import {
   authenticateToken,
   authorizeRoles,
   checkOrganizationAccess,
 } from "../../middleware/authUserMiddleware.ts";
-import Organization from "../organization/model/Organization.ts";
+import Organization from "../organization/models/Organization.ts";
 
 const SALT_ROUNDS = 10;
 

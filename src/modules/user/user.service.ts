@@ -3,7 +3,7 @@ import { Router } from "express";
 import User, { generateAccessTokenForUser, generateRefreshTokenForUser } from "./User.ts";
 import type { UserToCreate } from "../../types";
 import bcrypt from "bcrypt";
-import Organization, { type OrganizationAttributes } from "../organization/model/Organization.ts";
+import Organization, { type OrganizationAttributes } from "../organization/models/Organization.ts";
 import type { WhereOptions } from "sequelize";
 import jwt from "jsonwebtoken";
 import { JWT_REFRESH_SECRET } from "../../middleware/authUserMiddleware.ts";

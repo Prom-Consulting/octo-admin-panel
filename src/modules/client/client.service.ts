@@ -1,9 +1,9 @@
 import express from "express";
 import ClientActivity from "./ClientActivity.ts";
 import { nanoid } from "nanoid";
-import Branch from "../organization/model/Branch.ts";
+import Branch from "../organization/models/Branch.ts";
 import Client from "./Client.ts";
-import Organization from "../organization/model/Organization.ts";
+import Organization from "../organization/models/Organization.ts";
 import type { Request, Response, NextFunction } from "express";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";

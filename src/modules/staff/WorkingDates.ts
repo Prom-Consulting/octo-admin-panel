@@ -1,7 +1,7 @@
 import { DataTypes, Model, type Optional } from "sequelize";
 import { sequelize } from "../../dbConfig/dbConfig.ts";
 import OrganizationStaff from "./OrganizationStaff.ts";
-import Branch from "../organization/model/Branch.ts";
+import Branch from "../organization/models/Branch.ts";
 
 export interface WorkingDatesAttributes {
   id: number;
