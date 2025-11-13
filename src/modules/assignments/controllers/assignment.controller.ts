@@ -13,7 +13,7 @@ import transformPrices from "../../../utils /transformPrices.ts";
 import { DateTime } from "luxon";
 import { checkTimeOverlap } from "../checkTimeOverlap.ts";
 import type { ServiceInfo } from "../../../types";
-import User from "../../user/User.ts";
+import User from "../../user/models/User.ts";
 import axios from "axios";
 import { octoApi } from "../../../constants/urls.ts";
 import { getBranchAndOrganization } from "../../../utils /getBranchAndOrganization.ts";

@@ -1,6 +1,6 @@
 import { DataTypes, Model, type Optional } from "sequelize";
 import { sequelize } from "../../../dbConfig/dbConfig.ts";
-import User from "../../user/User.ts";
+import User from "../../user/models/User.ts";
 
 export interface OrganizationAttributes {
   id: number;

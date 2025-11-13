@@ -1,7 +1,7 @@
 import type { Response, Request, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import OrganizationStaff, { type BranchInfo } from "../modules/staff/models/OrganizationStaff.ts";
-import User from "../modules/user/User.ts";
+import User from "../modules/user/models/User.ts";
 import { envConfig } from "../../config/envConfig.ts";
 import type { BranchAttributes } from "../modules/organization/models/Branch.ts";
 import type { OrganizationAttributes } from "../modules/organization/models/Organization.ts";

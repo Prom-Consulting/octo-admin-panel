@@ -3,7 +3,7 @@ import cors from "cors";
 import { config } from "dotenv";
 import { logger } from "./logger";
 import { dbConnection } from "./db";
-import UserServiceRoute from "./modules/user/user.service.ts";
+import UserServiceRoute from "./modules/user/routers";
 import BranchServiceRoute from "./modules/organization/routers/branch.service.ts";
 import { setupSwagger } from "../swagger.ts";
 import ClientServiceRouter from "./modules/client/client.service.ts";

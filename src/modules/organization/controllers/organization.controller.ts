@@ -1,7 +1,7 @@
 import type { NextFunction, Request, Response } from "express";
 import type { WhereOptions } from "sequelize";
 import Organization from "../models/Organization.ts";
-import User from "../../user/User.ts";
+import User from "../../user/models/User.ts";
 import { createClientDatabase } from "../../../methods/octo_database.ts";
 import type { OrganizationCreate } from "../../../types";
 
@@ -145,4 +145,53 @@ export const editOrganization = async (req: Request, res: Response, next: NextFu
     console.log("Edit organization error", e);
     next(e);
   }
-}
+}/**
+ * @swagger
+ * /admin/organizations/{id}:
+ *   patch:
+ *     summary: Изменить данные организации
+ *     description: |
+ *       Обновляет количество филиалов, дату оплаты или активность организации.
+ *     tags: [AdminOrganizations]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID организации
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               branches:
+ *                 type: integer
+ *                 example: 5
+ *               paidDate:
+ *                 type: string
+ *                 format: date-time
+ *                 example: "2025-12-01T10:00:00.000Z"
+ *               isActive:
+ *                 type: boolean
+ *                 example: false
+ *     responses:
+ *       200:
+ *         description: Организация успешно обновлена.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Organization'
+ *       404:
+ *         description: Организация не найдена.
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: "Organization not found"
+ *       500:
+ *         description: Внутренняя ошибка сервера.
+ */
