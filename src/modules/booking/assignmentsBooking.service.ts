@@ -1,9 +1,9 @@
 import { Router } from "express";
 import type { Request, Response, NextFunction } from "express";
 import { Op } from "sequelize";
-import Assignment from "../assignments/Assignment.ts";
+import Assignment from "../assignments/models/Assignment.ts";
 import { authMiddleware } from "../../middleware/authAdminMiddleware.ts";
-import { createAssignment, getAssignmentById } from "../assignments/assignment.controller.ts";
+import { createAssignment, getAssignmentById } from "../assignments/controllers/assignment.controller.ts";
 
 const AssignmentsBookingServiceRoute = Router();
 

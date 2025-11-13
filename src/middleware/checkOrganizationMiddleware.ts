@@ -15,7 +15,6 @@ export const checkOrganizationMiddleware = async (
     const orgIdQuery = req.query?.organizationId || req.query?.organization_id;
     const orgIdBody = req.body?.organizationId || req.body?.organization_id;
     const orgIdParams = req.params?.organizationId || req.params?.organization_id;
-    console.log(orgIdParams);
 
     if (!orgIdQuery && !orgIdBody && !orgIdParams) {
       return res.status(400).json({
@@ -61,6 +60,7 @@ export const checkOrganizationMiddleware = async (
       });
     }
 
+    req.organization = organization;
     next();
   } catch (err) {
     console.error("checkOrganizationAccess error:", err);

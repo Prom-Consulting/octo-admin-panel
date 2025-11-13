@@ -3,10 +3,10 @@ import { ALLOWED_ROLES, type StaffRole } from "../../../constants/roles.ts";
 import sequelize from "sequelize/lib/sequelize";
 import OrganizationStaff from "../models/OrganizationStaff.ts";
 import { Op } from "sequelize";
-import Organization from "../../organization/models/Organization.ts";
 import { validateBranches } from "../../../methods/methods.ts";
 import bcrypt from "bcrypt";
 import Branch from "../../organization/models/Branch.ts";
+import { getBranchAndOrganization } from "../../../utils /getBranchAndOrganization.ts";
 
 const SALT_ROUNDS = 10;
 
@@ -125,10 +125,7 @@ export const createStaff = async (req: Request, res: Response, next: NextFunctio
       });
     }
 
-    const organization = await Organization.findByPk(organizationId);
-    if (!organization) {
-      return res.status(400).json({ error: "Organization not found" });
-    }
+    const { organization } = await getBranchAndOrganization(req, { organization: true });
 
     if (!firstname || !lastname || !password || !email) {
       return res.status(400).json({
@@ -137,7 +134,7 @@ export const createStaff = async (req: Request, res: Response, next: NextFunctio
       });
     }
 
-    const branchValidation = await validateBranches(branches, organizationId);
+    const branchValidation = await validateBranches(branches, organization.id);
     if (!branchValidation.isValid) {
       return res.status(400).json({
         success: false,

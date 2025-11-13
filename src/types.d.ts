@@ -1,4 +1,4 @@
-import type { AssignmentPaidMethod } from "./modules/assignments/Assignment.ts";
+import type { AssignmentPaidMethod } from "./modules/assignments/models/Assignment.ts";
 
 export interface UserToCreate {
   firstname: string;

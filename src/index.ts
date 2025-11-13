@@ -9,7 +9,7 @@ import { setupSwagger } from "../swagger.ts";
 import ClientServiceRouter from "./modules/client/client.service.ts";
 import OrganizationServiceRoute from "./modules/organization/routers/organization.service.ts";
 import BookingRoute from "./modules/booking/booking.service.ts";
-import AssignmentsServiceRoute from "./modules/assignments/assignment.service.ts";
+import AssignmentsServiceRoute from "./modules/assignments/routers/assignment.service.ts";
 import cookieParser from "cookie-parser";
 import StaffRouter from "./modules/staff/routers";
 import OrganizationStaffAuthorizationRouter from "./modules/staff/routers/auth.service.ts";
