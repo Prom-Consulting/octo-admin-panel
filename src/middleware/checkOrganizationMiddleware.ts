@@ -132,7 +132,6 @@ export const checkBranchMiddleware = async (
       }
     }
 
-    // Сохраняем branch в req
     req.branch = branch;
 
     next();

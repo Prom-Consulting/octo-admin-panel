@@ -64,7 +64,7 @@ export const staffLogin = async (req: Request, res: Response, next: NextFunction
       message: "Login successful",
       data: {
         user: staffData,
-        accessToken,
+        token: accessToken,
       },
     });
   } catch (e) {

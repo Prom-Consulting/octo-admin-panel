@@ -17,23 +17,11 @@ export const getBranches = async (req: Request, res: Response, next: NextFunctio
 
     } else if (user.role === "manager" || user.role === "employee") {
       const branchIds = user.branches?.map((b: any) => b.id);
-      console.log(branchIds);
       if (!branchIds?.length) return res.status(200).send([]);
       where.id = branchIds;
     } else {
       where.isActive = true;
     }
-
-  // else if (user.role === "owner") {
-  //     const organizations = await Organization.findAll({
-  //       where: { user_id: user.id },
-  //     });
-  //     const organizationIds = organizations.map((o) => o.id);
-  //
-  //     if (!organizationIds.length) return res.status(200).send([]);
-  //     where.organization_id = organizationIds;
-  //
-  //   }
 
     const listBranches = await Branch.findAll({ where });
     return res.send(listBranches);
@@ -46,7 +34,6 @@ export const getBranches = async (req: Request, res: Response, next: NextFunctio
 
 export const getBranchById = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { branchId } = req.params;
     const user = req.user;
     const { branch } = await getBranchAndOrganization(req, { branch: true });
 
@@ -185,3 +172,40 @@ export const deactivateBranch = async (req: Request, res: Response, next: NextFu
   }
 };
 
+export const getBranchWithOrganization = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const user = req.user;
+    const { branch } = await getBranchAndOrganization(req, { branch: true });
+
+    if (!user) return res.status(401).json({ error: "Not authorized" });
+    if (!branch) return res.status(400).json({ error: "Invalid branch id" });
+
+    if (user.role === "manager" || user.role === "employee") {
+      const allowedBranchIds = user.branches?.map((b: any) => b.id) || [];
+      if (!allowedBranchIds.includes(branch.id)) {
+        return res.status(403).json({ error: "Access denied to this branch" });
+      }
+    }
+
+    const branchData = await Branch.findOne({
+      where: { id: branch.id },
+      include: [
+        {
+          model: Organization,
+          as: "organization",
+        },
+      ],
+    });
+
+    if (!branchData) return res.status(404).json({ error: "Branch not found" });
+
+    return res.json(branchData);
+  } catch (e) {
+    console.error("Get branch + org error:", e);
+    next(e);
+  }
+};

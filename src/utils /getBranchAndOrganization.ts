@@ -3,9 +3,9 @@ import Branch from "../modules/organization/models/Branch.ts";
 import Organization from "../modules/organization/models/Organization.ts";
 
 interface GetBranchOrgOptions {
-  branch?: boolean;         // искать филиал
-  organization?: boolean;   // искать организацию
-  required?: boolean;       // если true — бросать ошибку при отсутствии id
+  branch?: boolean;
+  organization?: boolean;
+  required?: boolean;
 }
 
 export const getBranchAndOrganization = async (
@@ -15,30 +15,36 @@ export const getBranchAndOrganization = async (
   const body = req.body || {};
   const query = req.query || {};
 
-  const branchId = body.branchId ?? query.branchId;
-  const organizationId = body.organizationId ?? query.organizationId;
+  const branchId = body.branchId ?? query.branchId ?? req.params?.branchId;
+  const organizationId = body.organizationId ?? query.organizationId ?? req.params?.organizationId;
 
-  let branch = (req as any).branch;
-  let organization = (req as any).organization;
+  let branch = (req as any).branch || null;
+  let organization = (req as any).organization || null;
 
-  if (options.branch || options.required) {
-    if (!branch && branchId) {
+  if ((options.branch || options.required) && !branch) {
+    if (!branchId && options.required) throw { status: 400, message: "branchId is required" };
+
+    if (branchId) {
       branch = await Branch.findByPk(Number(branchId));
-      console.log(branch);
-    }
+      if (!branch && options.required) throw { status: 404, message: "Branch not found" };
 
-    if (!branch && options.required) {
-      throw { status: 404, message: "Branch not found" };
+      (req as any).branch = branch; // save
     }
   }
 
-  if (options.organization || options.required) {
-    if (!organization && organizationId) {
-      organization = await Organization.findByPk(Number(organizationId));
-    }
+  if ((options.organization || options.required) && !organization) {
 
-    if (!organization && options.required) {
-      throw { status: 404, message: "Organization not found" };
+    const resolvedOrgId =
+      organizationId ||
+      branch?.organization_id;
+
+    if (!resolvedOrgId && options.required) throw { status: 400, message: "organizationId is required" };
+
+    if (resolvedOrgId) {
+      organization = await Organization.findByPk(Number(resolvedOrgId));
+      if (!organization && options.required) throw { status: 404, message: "Organization not found" };
+
+      (req as any).organization = organization;
     }
   }
 

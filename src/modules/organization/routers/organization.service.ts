@@ -9,7 +9,7 @@ OrganizationServiceRoute.use(
   authorizeRoles("owner"),
 );
 
-OrganizationServiceRoute.get("/", checkOrganizationMiddleware, getListOrganizations);
+OrganizationServiceRoute.get("/", getListOrganizations);
 OrganizationServiceRoute.get("/:organizationId", checkOrganizationMiddleware, getOrganizationByID);
 
 export default OrganizationServiceRoute;

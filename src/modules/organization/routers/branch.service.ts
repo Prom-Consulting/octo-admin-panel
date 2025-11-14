@@ -3,7 +3,7 @@ import {
   createBranch,
   deactivateBranch,
   getBranchById,
-  getBranches,
+  getBranches, getBranchWithOrganization,
   updateBranch,
 } from "../controllers/branch.controllers.ts";
 import { authenticateToken, authorizeRoles } from "../../../middleware/authUserMiddleware.ts";
@@ -33,10 +33,16 @@ BranchServiceRoute.patch("/:branchId",
   authorizeRoles("owner"), checkBranchMiddleware,
   updateBranch
 );
+
 BranchServiceRoute.patch("/:branchId/deactivate",
   authorizeRoles("owner"), checkBranchMiddleware,
   deactivateBranch
 );
+
+BranchServiceRoute.get("/organization/:branchId",
+  checkBranchMiddleware,
+  getBranchWithOrganization,
+  );
 
 export default BranchServiceRoute;
 
