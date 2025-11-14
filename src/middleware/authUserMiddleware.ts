@@ -1,10 +1,13 @@
 import type { Response, Request, NextFunction } from "express";
 import jwt from "jsonwebtoken";
-import OrganizationStaff from "../modules/staff/OrganizationStaff.ts";
+import OrganizationStaff, { type BranchInfo } from "../modules/staff/models/OrganizationStaff.ts";
+import User from "../modules/user/models/User.ts";
 import { envConfig } from "../../config/envConfig.ts";
-import User from "../modules/user/User.ts";
+import type { BranchAttributes } from "../modules/organization/models/Branch.ts";
+import type { OrganizationAttributes } from "../modules/organization/models/Organization.ts";
 
-const JWT_SECRET = envConfig.JWT_SECRET!;
+export const JWT_SECRET = envConfig.JWT_SECRET || "default_fallback_secret";
+export const JWT_REFRESH_SECRET = envConfig.JWT_REFRESH_SECRET || "default_fallback_secret";
 
 // Расширяем интерфейс Request для добавления информации о пользователе
 declare global {
@@ -12,10 +15,15 @@ declare global {
     interface Request {
       user?: {
         id: number;
+        firstname: string;
+        lastname?: string | null;
         email: string;
         role: string;
         organizationId?: number | null;
+        branches?: BranchInfo[] | null;
       };
+      branch?: BranchAttributes;
+      organization?: OrganizationAttributes;
     }
   }
 }
@@ -27,7 +35,6 @@ export const authenticateToken = async (
   next: NextFunction
 ) => {
   try {
-    // Получаем токен из заголовка Authorization
     const authHeader = req.headers["authorization"];
     const token = authHeader && authHeader.split(" ")[1]; // Bearer TOKEN
 
@@ -38,8 +45,10 @@ export const authenticateToken = async (
       });
     }
 
-    // Верифицируем токен
     const decoded = jwt.verify(token, JWT_SECRET) as {
+      id: number;
+      first_name: string;
+      last_name?: string;
       email: string;
       role: string;
       organizationId?: number;
@@ -48,47 +57,64 @@ export const authenticateToken = async (
 
     const user = await User.findOne({
       where: { email: decoded.email },
-      attributes: ['id', 'email', 'role', 'first_name', 'last_name'],
+      attributes: ["id", "email", "role", "first_name", "last_name"],
     });
 
     if (user) {
       req.user = {
         id: user.id,
+        firstname: user.first_name,
+        lastname: user.last_name,
         email: user.email,
-        role: user.role || 'owner',
+        role: user.role,
         organizationId: null,
+        branches: null,
       };
       return next();
     }
 
     const staff = await OrganizationStaff.findOne({
-      where: { email: decoded.email, token },
-      attributes: ['id', 'email', 'role', 'organization', 'is_active', 'first_name', 'last_name'],
+      where: { email: decoded.email },
+      attributes: [
+        "id",
+        "email",
+        "role",
+        "organization",
+        "branches",
+        "is_active",
+        "first_name",
+        "last_name",
+      ],
     });
 
     if (!staff) {
       return res.status(401).json({
         success: false,
-        message: 'Invalid token or user not found',
+        message: "Invalid token or user not found",
       });
     }
 
     if (!staff.is_active) {
       return res.status(403).json({
         success: false,
-        message: 'Account is deactivated',
+        message: "Account is deactivated",
       });
     }
 
     req.user = {
       id: staff.id,
+      firstname: staff.first_name,
+      lastname: staff.last_name,
       email: staff.email,
       role: staff.role,
       organizationId: staff.organization.id,
+      branches: staff.branches
     };
 
     next();
   } catch (error) {
+    console.log("Auth middleware error", error);
+
     if (error instanceof jwt.JsonWebTokenError) {
       return res.status(401).json({
         success: false,
@@ -101,11 +127,11 @@ export const authenticateToken = async (
         message: "Token expired",
       });
     }
+
     return res.status(500).json({
       success: false,
       message: "Internal server error",
     });
-
   }
 };
 

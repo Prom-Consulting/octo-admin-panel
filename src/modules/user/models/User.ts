@@ -1,6 +1,8 @@
 import { DataTypes, Model, type Optional } from "sequelize";
-import { sequelize } from "../../dbConfig/dbConfig.ts";
+import { sequelize } from "../../../dbConfig/dbConfig.ts";
 import crypto from "crypto";
+import jwt from "jsonwebtoken";
+import { JWT_REFRESH_SECRET, JWT_SECRET } from "../../../middleware/authUserMiddleware.ts";
 
 export interface UserAttributes {
   id: number;
@@ -43,29 +45,17 @@ User.init(
       autoIncrement: true,
       primaryKey: true,
     },
-    first_name: {
-      type: DataTypes.STRING(255),
-      allowNull: false,
-    },
-    last_name: {
-      type: DataTypes.STRING(255),
-      allowNull: true,
-    },
-    role: {
-      type: DataTypes.STRING(255),
-      allowNull: false,
-    },
+    first_name: { type: DataTypes.STRING(255), allowNull: false, },
+    last_name: { type: DataTypes.STRING(255), allowNull: true, },
+    role: { type: DataTypes.STRING(255), allowNull: false, },
     email: {
       type: DataTypes.STRING(128),
       allowNull: false,
       unique: true,
     },
-    password: {
-      type: DataTypes.STRING(255),
-      allowNull: false,
-    },
+    password: { type: DataTypes.STRING(255), allowNull: false, },
     token: {
-      type: DataTypes.STRING(128),
+      type: DataTypes.TEXT,
       allowNull: false,
       defaultValue: () => crypto.randomBytes(32).toString("hex"),
     },
@@ -82,5 +72,31 @@ User.init(
     indexes: [{ unique: true, fields: ["email"] }],
   }
 );
+
+export const generateAccessTokenForUser = (user: UserCreationAttributes, organizationName: string) => {
+  return jwt.sign(
+    {
+      id: user.id,
+      email: user.email,
+      role: user.role,
+      first_name: user.first_name,
+      last_name: user.last_name,
+      organization_name: organizationName,
+    },
+    JWT_SECRET,
+    { expiresIn: "15m" }
+  );
+};
+
+export const generateRefreshTokenForUser = (user: UserCreationAttributes) => {
+  return jwt.sign(
+    {
+      id: user.id,
+      email: user.email,
+    },
+    JWT_REFRESH_SECRET,
+    { expiresIn: "7d" }
+  );
+};
 
 export default User;

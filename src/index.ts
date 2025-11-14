@@ -3,19 +3,19 @@ import cors from "cors";
 import { config } from "dotenv";
 import { logger } from "./logger";
 import { dbConnection } from "./db";
-import UserServiceRoute from "./modules/user/user.service.ts";
-import AdminServiceRoute from "./modules/admin/admin.service.ts";
-import authorizationService from "./modules/admin/authorization.service.ts";
-import BranchServiceRoute from "./modules/organization/branch.service.ts";
+import UserServiceRoute from "./modules/user/routers";
+import BranchServiceRoute from "./modules/organization/routers/branch.service.ts";
 import { setupSwagger } from "../swagger.ts";
 import ClientServiceRouter from "./modules/client/client.service.ts";
-import OrganizationServiceRoute from "./modules/organization/organization.service.ts";
+import OrganizationServiceRoute from "./modules/organization/routers/organization.service.ts";
 import BookingRoute from "./modules/booking/booking.service.ts";
-import AssignmentsServiceRoute from "./modules/assignments/assignment.service.ts";
-import OrganizationStaffAuthorizationRouter from "./modules/staff/organizationStaffAuthorization.ts";
-import OrganizationStaffRouter from "./modules/staff/organizationStaff.service.ts";
+import AssignmentsServiceRoute from "./modules/assignments/routers/assignment.service.ts";
+import cookieParser from "cookie-parser";
+import StaffRouter from "./modules/staff/routers";
+import OrganizationStaffAuthorizationRouter from "./modules/staff/routers/auth.service.ts";
+import WorkingDatesServiceRoute from "./modules/staff/routers/workingDates.service.ts";
+import AdminServiceRoute from "./modules/admin/routers";
 import AssignmentsBookingServiceRoute from "./modules/booking/assignmentsBooking.service.ts";
-import WorkingDatesServiceRoute from "./modules/staff/workingDates.service.ts";
 
 config();
 
@@ -23,7 +23,7 @@ const app = express();
 const PORT = 8000;
 
 app.use(logger);
-// app.use(cors());
+app.use(cookieParser());
 app.use(
   cors({
       origin: [
@@ -42,18 +42,24 @@ app.use("/clients", ClientServiceRouter);
 app.use("/organizations", OrganizationServiceRoute);
 app.use("/assignments", AssignmentsServiceRoute);
 app.use("/staffAuthorization", OrganizationStaffAuthorizationRouter);
-app.use("/staff", OrganizationStaffRouter);
+app.use("/staff", StaffRouter);
 app.use("/working-dates", WorkingDatesServiceRoute)
 
 //superadmin routes
 app.use("/admin", AdminServiceRoute);
-app.use("/admin", authorizationService);
 
 // booking routes
 app.use("/booking", BookingRoute);
 app.use("/booking", AssignmentsBookingServiceRoute);
 
 setupSwagger(app);
+
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    message: `Route ${req.method} ${req.originalUrl} not found`,
+  });
+});
 
 const run = async () => {
   await dbConnection();

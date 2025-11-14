@@ -1,6 +1,6 @@
 import { DataTypes, Model, type Optional } from "sequelize";
-import { sequelize } from "../../dbConfig/dbConfig.ts";
-import type { ClientInfo, Employee, PaymentMethod, ServiceInfo } from "../../types";
+import { sequelize } from "../../../dbConfig/dbConfig.ts";
+import type { ClientInfo, Employee, PaymentMethod, ServiceInfo } from "../../../types";
 
 export const ASSIGNMENT_STATUSES = ["new", "scheduled", "completed", "canceled"] as const;
 export type AssignmentStatus = typeof ASSIGNMENT_STATUSES[number];

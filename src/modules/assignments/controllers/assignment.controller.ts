@@ -5,19 +5,18 @@ import Assignment, {
   ASSIGMENT_PAID_METHOD,
   ASSIGNMENT_STATUSES,
   type AssignmentAttributes,
-} from "./Assignment.ts";
-import Branch from "../organization/Branch.ts";
-import getDayRange from "../../utils /getDayRange.ts";
-import Organization from "../organization/Organization.ts";
-import Client from "../client/Client.ts";
-import OrganizationStaff from "../staff/OrganizationStaff.ts";
-import transformPrices from "../../utils /transformPrices.ts";
+} from "../models/Assignment.ts";
+import getDayRange from "../../../utils /getDayRange.ts";
+import Client from "../../client/Client.ts";
+import OrganizationStaff from "../../staff/models/OrganizationStaff.ts";
+import transformPrices from "../../../utils /transformPrices.ts";
 import { DateTime } from "luxon";
-import { checkTimeOverlap } from "./checkTimeOverlap.ts";
-import type { ServiceInfo } from "../../types";
-import User from "../user/User.ts";
+import { checkTimeOverlap } from "../checkTimeOverlap.ts";
+import type { ServiceInfo } from "../../../types";
+import User from "../../user/models/User.ts";
 import axios from "axios";
-import { octoApi } from "../../constants/urls.ts";
+import { octoApi } from "../../../constants/urls.ts";
+import { getBranchAndOrganization } from "../../../utils /getBranchAndOrganization.ts";
 
 export const getListAssignments = async (
   req: Request,
@@ -25,29 +24,26 @@ export const getListAssignments = async (
   next: NextFunction
 ) => {
   try {
-    const { employeeId, branchId, clientId } = req.query;
-    const date = req.query.date as string;
-
+    const { employeeId, clientId, date } = req.query;
+    const user = req.user;
     const where: WhereOptions<Assignment> = {};
 
-    if (!branchId) {
-      return res.status(400).send({ error: "branchId is required" });
+    const { branch } = await getBranchAndOrganization(req, { branch: true });
+
+    if (user?.role === "employee") {
+      where.employee_id = user.id;
+    } else {
+      if (employeeId) where.employee_id = Number(employeeId);
     }
 
-    const branch = await Branch.findByPk(Number(branchId));
-    if (!branch) {
-      return res.status(400).send({ error: "Branch not found" });
-    }
+    if (clientId) where.client_id = Number(clientId);
+    if (branch) where.branch_id = branch.id;
 
     if (date) {
       const tz = branch.timezone || "UTC";
-      const { startOfDay, endOfDay } = getDayRange(date, date, tz);
+      const { startOfDay, endOfDay } = getDayRange(date as string, date as string, tz);
       where.assignment_date = { [Op.between]: [startOfDay, endOfDay] };
     }
-
-    if (branch) where.branch_id = branch.id;
-    if (employeeId) where.employee_id = Number(employeeId);
-    if (clientId) where.client_id = Number(clientId);
 
     const assignments = await Assignment.findAll({ where });
     res.send(assignments);
@@ -64,7 +60,10 @@ export const getAssignmentById = async (
 ) => {
   try {
     const { id } = req.params;
-    const assignment = await Assignment.findByPk(id);
+    const { branch } = await getBranchAndOrganization(req, { branch: true });
+    const assignment = await Assignment.findOne({
+      where: { id, branch_id: Number(branch.id) }
+    });
 
     if (!assignment) {
       return res.status(404).send({ error: "No Assignment found with this id" });
@@ -97,38 +96,41 @@ export const createAssignment = async (
       discount,
     } = req.body;
 
-    const organization = await Organization.findByPk(organizationId);
-    if (!organization) {
-      return res.status(404).json({ error: "Organization not found" });
-    }
-
-    const branch = await Branch.findByPk(branchId);
-    if (!branch) {
-      return res.status(404).json({ error: "Branch not found" });
-    }
+    const user = req.user;
+    const { branch, organization } = await getBranchAndOrganization(req, { required: true });
 
     const client = await Client.findByPk(clientId);
     if (!client) {
       return res.status(404).json({ error: "Client not found" });
     }
 
-    const employee = await OrganizationStaff.findByPk(employeeId);
+    let targetEmployeeId: number;
+    if (user?.role === "employee") {
+      targetEmployeeId = user.id;
+    } else {
+      if (!employeeId) {
+        return res.status(400).json({ error: "employeeId is required" });
+      }
+      targetEmployeeId = Number(employeeId);
+    }
+
+    const employee = await OrganizationStaff.findOne({
+      where: {
+        id: targetEmployeeId,
+        organization: {
+          [Op.contains]: { id: organization.id },
+        },
+        branches: {
+          [Op.contains]: [{ id: branch.id }]
+        }
+      }
+    });
+
     if (!employee) {
       return res.status(404).json({ error: "Employee not found" });
     }
 
     const discountValue = discount || 0;
-
-    // const workingDates = await WorkingDates.findOne({
-    //   where: {
-    //     branch_id: branchId,
-    //     staff_id: employee.id,
-    //   }
-    // });
-    //
-    // if(!workingDates || (workingDates && workingDates.is_day_off)) {
-    //   return res.status(400).send({ error: "The employee is not working on this date or has the day off." });
-    // }
 
     const normalizePrice = (s: ServiceInfo) => ({
       ...s,
@@ -155,6 +157,7 @@ export const createAssignment = async (
       0,
       Math.round(totalPrice - (totalPrice * discountValue) / 100)
     );
+
     const startDateTime = DateTime.fromISO(`${assignmentDate}T${startTime}`, {
       zone: branch.timezone,
     });
@@ -165,7 +168,7 @@ export const createAssignment = async (
     const endTimeUTC = endDateTime.toUTC().toFormat("HH:mm");
 
     const overlap = await checkTimeOverlap(
-      employeeId,
+      targetEmployeeId,
       branchId,
       assignmentDateUTC,
       startTimeUTC,
@@ -205,11 +208,11 @@ export const createAssignment = async (
       additional_services:
         additionalServices && normalizedAdditional.length > 0
           ? normalizedAdditional.map((s: ServiceInfo) => ({
-              id: s.id,
-              name: s.name,
-              price: s.price,
-              duration: s.duration,
-            }))
+            id: s.id,
+            name: s.name,
+            price: s.price,
+            duration: s.duration,
+          }))
           : null,
       status: "new",
       notes: notes || null,
@@ -543,6 +546,250 @@ export const editAssignment = async (
   }
 };
 
+export const editAssignmentBasic = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { id } = req.params;
+    const user = req.user!;
+    const assignment = await Assignment.findByPk(id);
+
+    if (!assignment) {
+      return res.status(404).json({ error: "Assignment not found" });
+    }
+
+    if (user.role === "employee" && assignment.employee_id !== user.id) {
+      return res.status(403).json({ error: "Access denied. You can edit only your assignments." });
+    }
+
+    const {
+      service,
+      additionalServices,
+      startTime,
+      endTime,
+      assignmentDate,
+      employeeId,
+      notes,
+      status,
+      discount,
+    } = req.body;
+
+    const updates: Partial<AssignmentAttributes> = {};
+
+    if (status && !ASSIGNMENT_STATUSES.includes(status)) {
+      return res.status(400).json({ error: "Invalid status value" });
+    }
+    if (status) updates.status = status;
+    if (notes) updates.notes = notes;
+
+    if (employeeId && user.role !== "employee") {
+      const employee = await OrganizationStaff.findByPk(employeeId);
+      if (!employee) {
+        return res.status(404).json({ error: "Employee not found" });
+      }
+      updates.employee_id = employee.id;
+      updates.employee_snapshot = {
+        first_name: employee.first_name,
+        last_name: employee.last_name || null,
+        role: employee.role,
+      };
+    }
+
+    let totalPrice = 0;
+    let totalDuration = 0;
+
+    if (service) {
+      const normalizedService = { ...service, price: transformPrices(service.price) };
+      updates.service_id = service.id;
+      updates.service_snapshot = {
+        name: service.name,
+        price: normalizedService.price,
+        duration: service.duration,
+      };
+      totalPrice += normalizedService.price;
+      totalDuration += service.duration;
+    }
+
+    const normalizedAdditional = Array.isArray(additionalServices)
+      ? additionalServices.map((s) => ({ ...s, price: transformPrices(s.price) }))
+      : [];
+
+    if (normalizedAdditional.length > 0) {
+      updates.additional_services = normalizedAdditional;
+      for (const s of normalizedAdditional) {
+        totalPrice += s.price;
+        totalDuration += s.duration;
+      }
+    }
+
+    const discountValue = discount ?? assignment.discount ?? 0;
+    updates.discount = discountValue;
+    updates.final_price = Math.max(0, Math.round(totalPrice - (totalPrice * discountValue) / 100));
+    updates.total_duration = totalDuration;
+
+    const currentDate = assignmentDate
+      ? DateTime.fromISO(assignmentDate, { zone: assignment.timezone })
+      : DateTime.fromJSDate(assignment.assignment_date, { zone: assignment.timezone }).startOf("day");
+
+    const startDateTime = DateTime.fromISO(`${currentDate.toISODate()}T${startTime ?? assignment.start_time}`, {
+      zone: assignment.timezone,
+    });
+
+    let endDateTime = DateTime.fromISO(`${currentDate.toISODate()}T${endTime ?? assignment.end_time}`, {
+      zone: assignment.timezone,
+    });
+
+    if (!endTime) endDateTime = startDateTime.plus({ minutes: totalDuration });
+
+    if (endDateTime <= startDateTime) {
+      return res.status(400).json({ error: "End time cannot be earlier than start time" });
+    }
+
+    if (assignmentDate) updates.assignment_date = startDateTime.toUTC().toJSDate();
+    if (startTime) updates.start_time = startDateTime.toUTC().toFormat("HH:mm");
+    if (endTime) updates.end_time = endDateTime.toUTC().toFormat("HH:mm");
+
+    await assignment.update(updates);
+
+    return res.json({ message: "Assignment updated successfully", data: assignment });
+  } catch (e) {
+    next(e);
+  }
+};
+
+export const payAssignment = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { id } = req.params;
+    const token = req.headers.authorization!.split(" ")[1];
+    const assignment = await Assignment.findByPk(id);
+    const user = req.user;
+
+    if (!assignment) return res.status(404).json({ error: "Assignment not found" });
+
+    const { paymentMethod, discount, certificateNumber } = req.body;
+
+    if (!paymentMethod?.length) {
+      return res.status(400).json({ error: "Payment method is required" });
+    }
+
+    const totalPaid = paymentMethod.reduce((sum: number, m: any) => {
+      const amount = transformPrices(m.amount);
+      return sum + amount;
+    }, 0);
+
+    const discountValue = discount ?? assignment.discount ?? 0;
+    const finalPrice = Math.max(0, Math.round(assignment.final_price - (assignment.final_price * discountValue) / 100));
+
+    const updates: Partial<AssignmentAttributes> = {
+      paid: "paid",
+      discount: discountValue,
+      payment_method: { methods: paymentMethod, total: totalPaid },
+      final_price: finalPrice,
+    };
+
+    await axios.post(
+      `${octoApi}accounting?branch_id=${assignment.branch_id}`,
+      {
+        branch_id: assignment.branch_id,
+        client_id: assignment.client_id,
+        client_snapshot: assignment.client_snapshot,
+        performed_by_id: assignment.employee_id,
+        performed_by_snapshot: assignment.employee_snapshot,
+        created_by_id: user?.id,
+        created_by_snapshot: {
+          first_name: user?.firstname,
+          last_name: user?.lastname,
+          role: user?.role,
+        },
+        source_type: "assignment",
+        source_id: assignment.id,
+        source_snapshot: {
+          main_service: assignment.service_snapshot.name,
+          additional_services: assignment.additional_services?.map(service => service.name),
+          date: assignment.assignment_date,
+          total_duration: assignment.total_duration,
+        },
+        payment_method: updates.payment_method?.methods,
+        discount: updates.discount,
+        date: DateTime.now().setZone(assignment.timezone).toUTC().toJSDate(),
+        timezone: assignment.timezone,
+        amount: finalPrice,
+        status: "success",
+        gift_certificate_number: certificateNumber,
+      },
+      {
+        headers: {
+          authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    await assignment.update(updates);
+
+    return res.json({ message: "Assignment paid successfully", data: assignment });
+  } catch (e) {
+    if (axios.isAxiosError(e)) {
+      return res.status(e.response?.status || 500).json({
+        success: false,
+        message: e.response?.data?.message || e.message,
+        data: e.response?.data || null,
+        url: e.config?.url,
+        method: e.config?.method,
+      });
+    }
+    next(e);
+  }
+};
+
+export const refundAssignment = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { id } = req.params;
+    const token = req.headers.authorization!.split(" ")[1];
+    const assignment = await Assignment.findByPk(id);
+
+    if (!assignment) return res.status(404).json({ error: "Assignment not found" });
+
+    await axios.patch(
+      `${octoApi}accounting/refund/${assignment.id}?branchId=${assignment.branch_id}`,
+      {
+        status: "refund",
+        sourceType: "assignment",
+      },
+      {
+        headers: {
+          authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    await assignment.update({ paid: "refund" });
+
+    return res.json({ message: "Assignment refunded successfully", data: assignment });
+  } catch (e) {
+    if (axios.isAxiosError(e)) {
+      return res.status(e.response?.status || 500).json({
+        success: false,
+        message: e.response?.data?.message || e.message,
+        data: e.response?.data || null,
+        url: e.config?.url,
+        method: e.config?.method,
+      });
+    }
+    next(e);
+  }
+};
 
 export const deleteAssignment = async (
   req: Request,

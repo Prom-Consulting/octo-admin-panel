@@ -1,4 +1,4 @@
-import Assignment from "./Assignment.ts";
+import Assignment from "./models/Assignment.ts";
 import { Op } from "sequelize";
 
 export const checkTimeOverlap = async (

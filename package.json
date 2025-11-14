@@ -10,12 +10,14 @@
     "db:stop": "docker stop admin-panel-db && docker rm admin-panel-db"
   },
   "dependencies": {
+    "@types/cookie-parser": "^1.4.10",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/luxon": "^3.7.1",
     "@types/yamljs": "^0.2.34",
     "axios": "^1.12.2",
     "bcrypt": "^6.0.0",
     "chalk": "^5.5.0",
+    "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^17.2.1",
     "envalid": "^8.1.0",

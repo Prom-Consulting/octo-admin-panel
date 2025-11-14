@@ -1,4 +1,4 @@
-import type { AssignmentPaidMethod } from "./modules/assignments/Assignment.ts";
+import type { AssignmentPaidMethod } from "./modules/assignments/models/Assignment.ts";
 
 export interface UserToCreate {
   firstname: string;
@@ -66,4 +66,22 @@ export interface CertificateInfo {
   amount: number;
   discount: number;
   expiry_date: Date;
+}
+
+export interface UserToken {
+  id: number;
+  first_name: string;
+  last_name?: string;
+  email: string;
+  role: string;
+  organizationId?: number;
+  organizationName?: string;
+}
+
+export interface OrganizationCreate {
+  name: string;
+  user_id: number;
+  branches: number;
+  paidDate: Date;
+  isActive: boolean;
 }

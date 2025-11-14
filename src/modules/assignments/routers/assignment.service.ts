@@ -1,22 +1,49 @@
 import express from "express";
-import { authenticateToken } from "../../middleware/authStaffMiddleware.ts";
+import { authenticateToken, authorizeRoles } from "../../../middleware/authUserMiddleware.ts";
 import {
   createAssignment,
   deleteAssignment,
-  editAssignment,
+  editAssignmentBasic,
   getAssignmentById,
-  getListAssignments,
-} from "./assignment.controller.ts";
+  getListAssignments, payAssignment, refundAssignment,
+} from "../controllers/assignment.controller.ts";
+import { checkBranchMiddleware, checkOrganizationMiddleware } from "../../../middleware/checkOrganizationMiddleware.ts";
 
 const AssignmentsServiceRoute = express.Router();
 
-AssignmentsServiceRoute.get("/", getListAssignments);
-AssignmentsServiceRoute.get("/:id", getAssignmentById);
-AssignmentsServiceRoute.post("/", createAssignment);
-AssignmentsServiceRoute.patch("/:id",
-  authenticateToken, editAssignment);
+AssignmentsServiceRoute.use(authenticateToken);
 
-AssignmentsServiceRoute.delete("/:id", deleteAssignment);
+AssignmentsServiceRoute.get("/",
+  authenticateToken,
+  checkBranchMiddleware,
+  getListAssignments
+);
+AssignmentsServiceRoute.get("/:id",
+  checkBranchMiddleware,
+  getAssignmentById
+);
+AssignmentsServiceRoute.post("/",
+  checkOrganizationMiddleware,
+  checkBranchMiddleware,
+  createAssignment
+);
+AssignmentsServiceRoute.patch("/:id",
+  editAssignmentBasic
+);
+
+AssignmentsServiceRoute.patch("/:id/pay",
+  authorizeRoles("owner", "manager"),
+  payAssignment
+);
+AssignmentsServiceRoute.patch("/:id/refund",
+  authorizeRoles("owner", "manager"),
+  refundAssignment
+);
+
+AssignmentsServiceRoute.delete("/:id",
+  authorizeRoles("owner", "manager"),
+  deleteAssignment
+);
 
 export default  AssignmentsServiceRoute;
 
@@ -24,15 +51,15 @@ export default  AssignmentsServiceRoute;
  * @swagger
  * tags:
  *   name: Assignments
- *   description: Управление клиентскими назначениями (записями, посещениями)
+ *   description: Управление клиентскими назначениями (записями, посещениями). Для владельца, менеджера и сотрудника. Админ доступа не имеет
  */
 
 /**
  * @swagger
  * /assignments:
  *   get:
- *     summary: Получить список назначений
- *     description: Возвращает список назначений (записей клиентов) для выбранного филиала. Можно фильтровать по дате, сотруднику и клиенту.
+ *     summary: Получить список назначений. Сотрудник может только свои
+ *     description: Возвращает список назначений (записей клиентов) для выбранного филиала. Можно фильтровать по дате, сотруднику и клиенту. Сотрудник может получить лишь свои записи
  *     tags: [Assignments]
  *     parameters:
  *       - in: query
@@ -81,7 +108,7 @@ export default  AssignmentsServiceRoute;
  * @swagger
  * /assignments/{id}:
  *   get:
- *     summary: Получить данные конкретного назначения
+ *     summary: Получить данные конкретного назначения. Сотрудник может только свои
  *     description: Возвращает полные данные по конкретному назначению (записи клиента).
  *     tags: [Assignments]
  *     parameters:
@@ -91,6 +118,12 @@ export default  AssignmentsServiceRoute;
  *         schema:
  *           type: integer
  *         description: ID назначения
+ *       - in: query
+ *         name: branchId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID филиала, к которому относится назначение
  *     responses:
  *       200:
  *         description: Успешно. Возвращает объект назначения.
@@ -108,7 +141,7 @@ export default  AssignmentsServiceRoute;
  * @swagger
  * /assignments:
  *   post:
- *     summary: Создать новое назначение
+ *     summary: Создать новое назначение. Сотрудник может только свои
  *     description: Создаёт новую запись клиента к сотруднику. Проверяется наличие организации, филиала, клиента и сотрудника. В случае конфликта времени возвращает ошибку.
  *     tags: [Assignments]
  *     requestBody:
@@ -147,9 +180,11 @@ export default  AssignmentsServiceRoute;
  * @swagger
  * /assignments/{id}:
  *   patch:
- *     summary: Обновить данные назначения
- *     description: Обновляет данные существующего назначения.
- *       Если назначение оплачено (paid = "paid"), автоматически создаётся запись в бухгалтерском учёте (Accounting).
+ *     summary: Редактировать назначение. Сотрудник может только свои
+ *     description: |
+ *       Обновляет основную информацию о назначении.
+ *       Сотрудник может редактировать **только свои** назначения.
+ *       Владельцы и менеджеры могут редактировать любые.
  *     tags: [Assignments]
  *     security:
  *       - bearerAuth: []
@@ -165,36 +200,197 @@ export default  AssignmentsServiceRoute;
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/UpdateAssignmentDto'
+ *             type: object
+ *             properties:
+ *               service:
+ *                 type: object
+ *                 properties:
+ *                   id:
+ *                     type: integer
+ *                     example: 12
+ *                   name:
+ *                     type: string
+ *                     example: "Массаж лица"
+ *                   duration:
+ *                     type: integer
+ *                     example: 60
+ *                   price:
+ *                     type: number
+ *                     example: 1500
+ *               additionalServices:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: integer
+ *                       example: 5
+ *                     name:
+ *                       type: string
+ *                       example: "Пилинг"
+ *                     duration:
+ *                       type: integer
+ *                       example: 30
+ *                     price:
+ *                       type: number
+ *                       example: 700
+ *               startTime:
+ *                 type: string
+ *                 example: "10:00"
+ *               endTime:
+ *                 type: string
+ *                 example: "11:30"
+ *               assignmentDate:
+ *                 type: string
+ *                 format: date
+ *                 example: "2025-11-15"
+ *               employeeId:
+ *                 type: integer
+ *                 example: 7
+ *               notes:
+ *                 type: string
+ *                 example: "Клиент предпочитает мягкий массаж"
+ *               status:
+ *                 type: string
+ *                 example: "confirmed"
+ *               discount:
+ *                 type: number
+ *                 example: 10
  *     responses:
  *       200:
- *         description: Назначение успешно обновлено.
- *           Если оплата произведена — создана запись в учёте (Accounting).
+ *         description: Назначение успешно обновлено
  *         content:
  *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: "Assignment updated successfully"
- *                 assignment:
- *                   $ref: '#/components/schemas/Assignment'
+ *             example:
+ *               message: "Assignment updated successfully"
+ *               data:
+ *                 id: 32
+ *                 status: "confirmed"
+ *                 final_price: 1980
  *       400:
- *         description: Ошибка валидации (например, время окончания раньше начала, некорректный статус или способ оплаты).
+ *         description: Ошибка валидации
+ *         content:
+ *           application/json:
+ *             example:
+ *               error: "Invalid status value"
+ *       403:
+ *         description: Сотрудник пытается изменить чужое назначение
  *       404:
- *         description: Назначение, сотрудник или пользователь не найдены.
- *       401:
- *         description: Неавторизованный доступ (отсутствует или некорректный JWT-токен).
+ *         description: Назначение или сотрудник не найдены
  *       500:
- *         description: Внутренняя ошибка сервера.
+ *         description: Внутренняя ошибка сервера
+ */
+
+/**
+ * @swagger
+ * /assignments/{id}/pay:
+ *   patch:
+ *     summary: Оплатить назначение. Только менеджер и владелец
+ *     description: |
+ *       Помечает назначение как оплаченное и создаёт запись в бухгалтерском учёте (Accounting).
+ *       Этот эндпоинт обычно используется менеджером или владельцем.
+ *     tags: [Assignments]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID назначения
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               paymentMethod:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     type:
+ *                       type: string
+ *                       example: "cash"
+ *                     amount:
+ *                       type: number
+ *                       example: 2500
+ *               discount:
+ *                 type: number
+ *                 example: 5
+ *               certificateNumber:
+ *                 type: string
+ *                 example: "CERT-2025-001"
+ *           example:
+ *             paymentMethod:
+ *               - type: "cash"
+ *                 amount: 2500
+ *             discount: 5
+ *             certificateNumber: "CERT-2025-001"
+ *     responses:
+ *       200:
+ *         description: Оплата прошла успешно
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: "Assignment paid successfully"
+ *               data:
+ *                 id: 32
+ *                 paid: "paid"
+ *                 final_price: 2375
+ *       400:
+ *         description: Не указан способ оплаты
+ *         content:
+ *           application/json:
+ *             example:
+ *               error: "Payment method is required"
+ *       404:
+ *         description: Назначение не найдено
+ *       500:
+ *         description: Внутренняя ошибка сервера
+ */
+
+/**
+ * @swagger
+ * /assignments/{id}/refund:
+ *   patch:
+ *     summary: Возврат оплаты по назначению. Только менеджер и владелец
+ *     description: |
+ *       Производит возврат ранее оплаченного назначения.
+ *       Создаёт корректирующую запись в бухгалтерском учёте.
+ *     tags: [Assignments]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID назначения
+ *     responses:
+ *       200:
+ *         description: Возврат успешно выполнен
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: "Assignment refunded successfully"
+ *               data:
+ *                 id: 32
+ *                 paid: "refund"
+ *       404:
+ *         description: Назначение не найдено
+ *       500:
+ *         description: Внутренняя ошибка сервера
  */
 
 /**
  * @swagger
  * /assignments/{id}:
  *   delete:
- *     summary: Удалить назначение
+ *     summary: Удалить назначение. Только менеджер и владелец
  *     description: Удаляет назначение, если оно не оплачено.
  *       Оплаченные назначения удалить нельзя.
  *     tags: [Assignments]
