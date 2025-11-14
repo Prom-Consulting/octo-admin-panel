@@ -18,47 +18,8 @@ AdminOrganizations.patch("/:id", editOrganization);
 /**
  * @swagger
  * tags:
- *   - name: AdminOrganizations
- *     description: Управление организациями (только для админов). Удалять организацию нельзя
- */
-
-/**
- * @swagger
- * /admin/organizations:
- *   get:
- *     summary: Получить список организаций
- *     description: |
- *       Возвращает список организаций в зависимости от роли пользователя:
- *       - **admin**: может видеть все организации или фильтровать по `ownerId`.
- *       - **owner**: видит только свои организации.
- *       - **другие роли**: видят только активные организации.
- *     tags: [AdminOrganizations]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: query
- *         name: ownerId
- *         schema:
- *           type: integer
- *         required: false
- *         description: ID владельца (используется только админом для фильтрации)
- *     responses:
- *       200:
- *         description: Успешно. Список организаций получен.
- *         content:
- *           application/json:
- *             schema:
- *               type: array
- *               items:
- *                 $ref: '#/components/schemas/Organization'
- *       401:
- *         description: Пользователь не авторизован.
- *         content:
- *           application/json:
- *             example:
- *               error: "Not authorized"
- *       500:
- *         description: Внутренняя ошибка сервера.
+ *   - name: Admin Organizations
+ *     description: Управление организациями (только для админов). Удалять организацию нельзя. Можно только деактивитровть
  */
 
 /**
@@ -72,7 +33,7 @@ AdminOrganizations.patch("/:id", editOrganization);
  *       - **admin**: может просматривать любую.
  *       - **owner**: только свои.
  *       - **остальные**: только активные.
- *     tags: [AdminOrganizations]
+ *     tags: [Admin Organizations]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -113,6 +74,60 @@ AdminOrganizations.patch("/:id", editOrganization);
 
 /**
  * @swagger
+ * /admin/organizations/{id}:
+ *   patch:
+ *     summary: Изменить данные организации
+ *     description: |
+ *       Обновляет количество филиалов, дату оплаты или активность организации.
+ *     tags: [Admin Organizations]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID организации
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               branches:
+ *                 type: integer
+ *                 example: 5
+ *               paidDate:
+ *                 type: string
+ *                 format: date-time
+ *                 example: "2025-12-01T10:00:00.000Z"
+ *               isActive:
+ *                 type: boolean
+ *                 example: false
+ *               userId:
+ *                 type: integer
+ *                 example: 1
+ *     responses:
+ *       200:
+ *         description: Организация успешно обновлена.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Organization'
+ *       404:
+ *         description: Организация не найдена.
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: "Organization not found"
+ *       500:
+ *         description: Внутренняя ошибка сервера.
+ */
+
+/**
+ * @swagger
  * /admin/organizations:
  *   post:
  *     summary: Создать новую организацию. Вместе с ней создается и база данных для этой организации.
@@ -120,7 +135,7 @@ AdminOrganizations.patch("/:id", editOrganization);
  *       Создаёт новую организацию, связанную с существующим пользователем.
  *       Проверяет наличие пользователя и уникальность имени организации.
  *       Создает базу данных на бэке Octo Api
- *     tags: [AdminOrganizations]
+ *     tags: [Admin Organizations]
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -182,7 +197,6 @@ AdminOrganizations.patch("/:id", editOrganization);
  *             example:
  *               error: "Database issue"
  */
-
 
 
 export default AdminOrganizations;

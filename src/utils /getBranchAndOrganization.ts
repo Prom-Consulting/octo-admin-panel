@@ -12,8 +12,11 @@ export const getBranchAndOrganization = async (
   req: Request,
   options: GetBranchOrgOptions = { branch: true, organization: true, required: true }
 ) => {
-  const { branchId, organizationId } =
-    req.body.branchId || req.body.organizationId ? req.body : req.query;
+  const body = req.body || {};
+  const query = req.query || {};
+
+  const branchId = body.branchId ?? query.branchId;
+  const organizationId = body.organizationId ?? query.organizationId;
 
   let branch = (req as any).branch;
   let organization = (req as any).organization;

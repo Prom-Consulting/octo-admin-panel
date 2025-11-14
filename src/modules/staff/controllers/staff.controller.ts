@@ -255,15 +255,6 @@ export const patchStaff = async (req: Request, res: Response, next: NextFunction
     const staff = await OrganizationStaff.findByPk(id, { attributes: { exclude: [] } });
     if (!staff) return res.status(404).json({ success: false, message: "Staff member not found" });
 
-    const isManager = req.user?.role === "manager";
-    const isOwnProfile = req.user?.id === staff.id;
-
-    if (!isManager && !isOwnProfile) return res.status(403).json({ success: false, message: "Access denied" });
-
-    if (!isManager && (updates.role || updates.organization || updates.branches)) {
-      return res.status(403).json({ success: false, message: "Only managers can modify role, organization or branches" });
-    }
-
     const targetOrganizationId = updates.organization?.id || staff.organization.id;
 
     if (updates.branches) {

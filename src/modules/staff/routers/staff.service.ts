@@ -19,42 +19,42 @@ OrganizationStaffRouter.get("/",
   getListStaff
 );
 
-OrganizationStaffRouter.patch("/:id", checkOrganizationMiddleware, patchStaff);
-
-OrganizationStaffRouter.use(authorizeRoles("manager", "owner"));
+OrganizationStaffRouter.patch("/:id",
+  checkOrganizationMiddleware, authorizeRoles( "owner"),
+  patchStaff
+);
 
 OrganizationStaffRouter.get("/byBranch",
-  checkOrganizationMiddleware,
-  checkBranchMiddleware,
+  checkOrganizationMiddleware, checkBranchMiddleware, authorizeRoles("manager", "owner"),
   getStaffByBranch
 );
 OrganizationStaffRouter.post("/",
-  checkOrganizationMiddleware,
+  checkOrganizationMiddleware, authorizeRoles( "owner"),
   createStaff
 );
 
 OrganizationStaffRouter.put("/:id",
-  checkOrganizationMiddleware,
+  checkOrganizationMiddleware, authorizeRoles( "owner"),
   updateStaff
 );
 
 OrganizationStaffRouter.delete("/:id",
-  checkOrganizationMiddleware,
+  checkOrganizationMiddleware, authorizeRoles( "owner"),
   deleteStaff
 );
 
 OrganizationStaffRouter.patch("/:id/de-activate",
-  checkOrganizationMiddleware,
+  checkOrganizationMiddleware, authorizeRoles( "owner"),
   activateStaff
 );
 
 OrganizationStaffRouter.post("/:id/branches",
-  checkOrganizationMiddleware,
+  checkOrganizationMiddleware, authorizeRoles( "owner"),
   addBranchToStaff
 );
 
 OrganizationStaffRouter.delete("/:id/branches/:branchId",
-  checkOrganizationMiddleware,
+  checkOrganizationMiddleware, authorizeRoles( "owner"),
   removeBranchFromStaff
 );
 
@@ -64,7 +64,7 @@ export default OrganizationStaffRouter;
  * @openapi
  * tags:
  *   name: OrganizationStaff
- *   description: Управление сотрудниками организации
+ *   description: Управление сотрудниками организации.
  */
 
 /**
@@ -144,7 +144,7 @@ export default OrganizationStaffRouter;
  * @openapi
  * /staff:
  *   get:
- *     summary: Получить список сотрудников организации
+ *     summary: Получить список сотрудников организации. Только владелец (owner)
  *     tags: [OrganizationStaff]
  *     security:
  *       - bearerAuth: []
@@ -186,7 +186,7 @@ export default OrganizationStaffRouter;
  * @openapi
  * /staff/byBranch:
  *   get:
- *     summary: Получить сотрудников по филиалу
+ *     summary: Получить сотрудников по филиалу. Только владелец (owner) и менеджер (manager)
  *     tags: [OrganizationStaff]
  *     security:
  *       - bearerAuth: []
@@ -220,7 +220,7 @@ export default OrganizationStaffRouter;
  * @openapi
  * /staff:
  *   post:
- *     summary: Создать нового сотрудника
+ *     summary: Создать нового сотрудника. Только владелец (owner)
  *     tags: [OrganizationStaff]
  *     security:
  *       - bearerAuth: []
@@ -274,7 +274,7 @@ export default OrganizationStaffRouter;
  * @openapi
  * /staff/{id}:
  *   put:
- *     summary: Полное обновление данных сотрудника
+ *     summary: Полное обновление данных сотрудника. Только владелец (owner)
  *     tags: [OrganizationStaff]
  *     security:
  *       - bearerAuth: []
@@ -300,7 +300,7 @@ export default OrganizationStaffRouter;
  * @openapi
  * /staff/{id}:
  *   patch:
- *     summary: Частичное обновление данных сотрудника (доступно менеджеру или самому пользователю)
+ *     summary: Частичное обновление данных сотрудника. Только владелец (owner)
  *     tags: [OrganizationStaff]
  *     security:
  *       - bearerAuth: []
@@ -325,7 +325,7 @@ export default OrganizationStaffRouter;
  * @openapi
  * /staff/{id}:
  *   delete:
- *     summary: Удалить сотрудника (только для менеджера или владельца)
+ *     summary: Удалить сотрудника. Только владелец (owner)
  *     tags: [OrganizationStaff]
  *     security:
  *       - bearerAuth: []
@@ -346,7 +346,7 @@ export default OrganizationStaffRouter;
  * @openapi
  * /staff/{id}/de-activate:
  *   patch:
- *     summary: Активировать или деактивировать сотрудника
+ *     summary: Активировать или деактивировать сотрудника. Только владелец (owner)
  *     tags: [OrganizationStaff]
  *     security:
  *       - bearerAuth: []
@@ -365,7 +365,7 @@ export default OrganizationStaffRouter;
  * @openapi
  * /staff/{id}/branches:
  *   post:
- *     summary: Добавить сотрудника к филиалу
+ *     summary: Добавить сотрудника к филиалу. Только владелец (owner)
  *     tags: [OrganizationStaff]
  *     security:
  *       - bearerAuth: []
@@ -397,7 +397,7 @@ export default OrganizationStaffRouter;
  * @openapi
  * /staff/{id}/branches/{branchId}:
  *   delete:
- *     summary: Удалить сотрудника из филиала
+ *     summary: Удалить сотрудника из филиала. Только владелец (owner)
  *     tags: [OrganizationStaff]
  *     security:
  *       - bearerAuth: []

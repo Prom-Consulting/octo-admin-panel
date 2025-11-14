@@ -44,6 +44,7 @@ export type OrganizationStaffCreationAttributes = Optional<
   | "photo_url"
   | "createdAt"
   | "updatedAt"
+  | "email"
   | "branches" // можно создать без филиалов
 >;
 

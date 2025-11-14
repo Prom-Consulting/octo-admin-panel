@@ -18,14 +18,14 @@ export default OrganizationServiceRoute;
  * @swagger
  * tags:
  *   name: Organizations
- *   description: Работа с организациями
+ *   description: Работа с организациями. Только для владельца (owner). Владелец может взаимодействовать лишь свои организации
  */
 
 /**
  * @swagger
  * /organizations/:
  *   get:
- *     summary: Получить список организаций. Доступен лишь владельцу. Владелец может видеть лишь свои организации
+ *     summary: Получить список организаций.
  *     tags: [Organizations]
  *     parameters:
  *       - in: query

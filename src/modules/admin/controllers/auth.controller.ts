@@ -46,7 +46,7 @@ export const adminLogin = async (req: Request, res: Response, next: NextFunction
         first_name: admin.first_name,
         last_name: admin.last_name,
       },
-      access_token: accessToken
+      token: accessToken
     });
   } catch (e) {
     console.error("Login error:", e);

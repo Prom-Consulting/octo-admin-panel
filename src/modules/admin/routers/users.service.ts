@@ -7,10 +7,10 @@ const AdminUsersService = express.Router();
 
 AdminUsersService.use(authAdminMiddleware, authorizeRoles("admin"));
 
-AdminUsersService.get("/getUserList", getUserList);
-AdminUsersService.post("/createUser", createUser)
-AdminUsersService.put("/changeUserData/:id", changeUserData);
-AdminUsersService.delete("/deleteUserData/:id", deleteUser);
+AdminUsersService.get("/", getUserList);
+AdminUsersService.post("/", createUser)
+AdminUsersService.patch("/:id", changeUserData);
+AdminUsersService.delete("/:id", deleteUser);
 
 /**
  * @swagger
@@ -21,7 +21,7 @@ AdminUsersService.delete("/deleteUserData/:id", deleteUser);
 
 /**
  * @swagger
- * /admin/user/getUserList:
+ * /admin/user:
  *   get:
  *     summary: Получить список пользователей
  *     description: Возвращает список всех пользователей. Можно фильтровать по активности.
@@ -58,7 +58,7 @@ AdminUsersService.delete("/deleteUserData/:id", deleteUser);
 
 /**
  * @swagger
- * /admin/user/createUser:
+ * /admin/user:
  *   post:
  *     summary: Создать нового пользователя
  *     description: Создаёт нового пользователя с ролью `owner`. Пароль генерируется автоматически и возвращается в ответе.
@@ -126,8 +126,8 @@ AdminUsersService.delete("/deleteUserData/:id", deleteUser);
 
 /**
  * @swagger
- * /admin/user/changeUserData/{id}:
- *   put:
+ * /admin/user/{id}:
+ *   patch:
  *     summary: Изменить данные пользователя
  *     description: Позволяет администратору изменить данные пользователя по ID.
  *     tags: [Admin Users]
@@ -186,7 +186,7 @@ AdminUsersService.delete("/deleteUserData/:id", deleteUser);
 
 /**
  * @swagger
- * /admin/user/deleteUserData/{id}:
+ * /admin/user/{id}:
  *   delete:
  *     summary: Удалить пользователя
  *     description: Удаляет пользователя по его ID.

@@ -51,14 +51,14 @@ export default  AssignmentsServiceRoute;
  * @swagger
  * tags:
  *   name: Assignments
- *   description: Управление клиентскими назначениями (записями, посещениями)
+ *   description: Управление клиентскими назначениями (записями, посещениями). Для владельца, менеджера и сотрудника. Админ доступа не имеет
  */
 
 /**
  * @swagger
  * /assignments:
  *   get:
- *     summary: Получить список назначений
+ *     summary: Получить список назначений. Сотрудник может только свои
  *     description: Возвращает список назначений (записей клиентов) для выбранного филиала. Можно фильтровать по дате, сотруднику и клиенту. Сотрудник может получить лишь свои записи
  *     tags: [Assignments]
  *     parameters:
@@ -108,7 +108,7 @@ export default  AssignmentsServiceRoute;
  * @swagger
  * /assignments/{id}:
  *   get:
- *     summary: Получить данные конкретного назначения
+ *     summary: Получить данные конкретного назначения. Сотрудник может только свои
  *     description: Возвращает полные данные по конкретному назначению (записи клиента).
  *     tags: [Assignments]
  *     parameters:
@@ -141,7 +141,7 @@ export default  AssignmentsServiceRoute;
  * @swagger
  * /assignments:
  *   post:
- *     summary: Создать новое назначение
+ *     summary: Создать новое назначение. Сотрудник может только свои
  *     description: Создаёт новую запись клиента к сотруднику. Проверяется наличие организации, филиала, клиента и сотрудника. В случае конфликта времени возвращает ошибку.
  *     tags: [Assignments]
  *     requestBody:
@@ -180,7 +180,7 @@ export default  AssignmentsServiceRoute;
  * @swagger
  * /assignments/{id}:
  *   patch:
- *     summary: Редактировать назначение
+ *     summary: Редактировать назначение. Сотрудник может только свои
  *     description: |
  *       Обновляет основную информацию о назначении.
  *       Сотрудник может редактировать **только свои** назначения.
@@ -285,7 +285,7 @@ export default  AssignmentsServiceRoute;
  * @swagger
  * /assignments/{id}/pay:
  *   patch:
- *     summary: Оплатить назначение
+ *     summary: Оплатить назначение. Только менеджер и владелец
  *     description: |
  *       Помечает назначение как оплаченное и создаёт запись в бухгалтерском учёте (Accounting).
  *       Этот эндпоинт обычно используется менеджером или владельцем.
@@ -356,7 +356,7 @@ export default  AssignmentsServiceRoute;
  * @swagger
  * /assignments/{id}/refund:
  *   patch:
- *     summary: Возврат оплаты по назначению
+ *     summary: Возврат оплаты по назначению. Только менеджер и владелец
  *     description: |
  *       Производит возврат ранее оплаченного назначения.
  *       Создаёт корректирующую запись в бухгалтерском учёте.
@@ -390,7 +390,7 @@ export default  AssignmentsServiceRoute;
  * @swagger
  * /assignments/{id}:
  *   delete:
- *     summary: Удалить назначение
+ *     summary: Удалить назначение. Только менеджер и владелец
  *     description: Удаляет назначение, если оно не оплачено.
  *       Оплаченные назначения удалить нельзя.
  *     tags: [Assignments]

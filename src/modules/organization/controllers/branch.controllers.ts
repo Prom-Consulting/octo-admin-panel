@@ -2,6 +2,7 @@ import type { NextFunction, Request, Response } from "express";
 import type { WhereOptions } from "sequelize";
 import Branch from "../models/Branch.ts";
 import Organization from "../models/Organization.ts";
+import { getBranchAndOrganization } from "../../../utils /getBranchAndOrganization.ts";
 
 export const getBranches = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -11,17 +12,8 @@ export const getBranches = async (req: Request, res: Response, next: NextFunctio
 
     if (!user) return res.status(401).json({ error: "Not authorized" });
 
-    if (user.role === "admin") {
+    if (user.role === "admin" || user.role === "owner") {
       if (organizationId) where.organization_id = Number(organizationId);
-
-    } else if (user.role === "owner") {
-      const organizations = await Organization.findAll({
-        where: { user_id: user.id },
-      });
-      const organizationIds = organizations.map((o) => o.id);
-
-      if (!organizationIds.length) return res.status(200).send([]);
-      where.organization_id = organizationIds;
 
     } else if (user.role === "manager" || user.role === "employee") {
       const branchIds = user.branches?.map((b: any) => b.id);
@@ -31,6 +23,17 @@ export const getBranches = async (req: Request, res: Response, next: NextFunctio
     } else {
       where.isActive = true;
     }
+
+  // else if (user.role === "owner") {
+  //     const organizations = await Organization.findAll({
+  //       where: { user_id: user.id },
+  //     });
+  //     const organizationIds = organizations.map((o) => o.id);
+  //
+  //     if (!organizationIds.length) return res.status(200).send([]);
+  //     where.organization_id = organizationIds;
+  //
+  //   }
 
     const listBranches = await Branch.findAll({ where });
     return res.send(listBranches);
@@ -45,7 +48,7 @@ export const getBranchById = async (req: Request, res: Response, next: NextFunct
   try {
     const { branchId } = req.params;
     const user = req.user;
-    const branch = await Branch.findByPk(branchId);
+    const { branch } = await getBranchAndOrganization(req, { branch: true });
 
     if (!user) return res.status(401).json({ error: "Not authorized" });
     if (!branch) return res.status(404).send({ error: "Branch not found" });

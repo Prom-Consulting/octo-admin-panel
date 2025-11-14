@@ -11,15 +11,16 @@ import { checkBranchMiddleware, checkOrganizationMiddleware } from "../../../mid
 
 const BranchServiceRoute = express.Router();
 
-BranchServiceRoute.use(authenticateToken, checkOrganizationMiddleware); //middleware
+BranchServiceRoute.use(authenticateToken); //middleware
 
 BranchServiceRoute.get("/",
-  authorizeRoles("owner", "manager"), //middleware
-  getBranches                                      // route
+  authorizeRoles("owner", "manager"), checkOrganizationMiddleware, //middleware
+  getBranches                         // route
 );
 
 BranchServiceRoute.get("/:branchId",
-  authorizeRoles("owner", "manager"), checkBranchMiddleware,
+  authorizeRoles("owner", "manager"),
+  checkBranchMiddleware,
   getBranchById
 );
 

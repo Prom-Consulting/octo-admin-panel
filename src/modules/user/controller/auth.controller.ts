@@ -68,7 +68,6 @@ export const userLogin = async (req: Request, res: Response, next: NextFunction)
       success: true,
       message: "Success",
       token: accessToken,
-      refreshToken,
       user: {
         id: user.id,
         role: user.role,
