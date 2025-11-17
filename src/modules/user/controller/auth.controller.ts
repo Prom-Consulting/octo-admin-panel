@@ -58,9 +58,10 @@ export const userLogin = async (req: Request, res: Response, next: NextFunction)
     await user.update({token: refreshToken});
 
     res.cookie("refreshToken", refreshToken, {
-      httpOnly: false,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
+      httpOnly: true,
+      // secure: process.env.NODE_ENV === "production",
+      sameSite: "none",
+      secure: true,
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
