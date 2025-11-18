@@ -1,9 +1,9 @@
 import { DataTypes, Model, type Optional } from "sequelize";
-import { sequelize } from "../../dbConfig/dbConfig.ts";
+import { sequelize } from "../../../dbConfig/dbConfig.ts";
+import { nanoid } from "nanoid";
 
 export interface ClientAttributes {
   id: number;
-  // organization_id: number;
   source_id: string; // telegram_id создан через календарь/месенджер или сам через онлайн запись на сайте. 	manual/calendar/phone
   first_name: string;
   last_name?: string | null;
@@ -26,7 +26,6 @@ export class Client
   implements ClientAttributes
 {
   declare id: number;
-  // declare organization_id: number;
   declare source_id: string;
   declare first_name: string;
   declare password: string;
@@ -45,7 +44,6 @@ Client.init(
       autoIncrement: true,
       primaryKey: true,
     },
-    // organization_id: { type: DataTypes.INTEGER, allowNull: true },
     source_id: {
       type: DataTypes.TEXT,
       allowNull: false,
@@ -72,10 +70,6 @@ Client.init(
   }
 );
 
-// Client.belongsTo(Organization, {
-//   as: "organization",
-//   foreignKey: "organization_id",
-// });
-// Organization.hasMany(Client, { as: "client", foreignKey: "organization_id" });
+const generateClientId = async (source: string) => `${source}_${Date.now()}_${nanoid(6)}`;
 
 export default Client;

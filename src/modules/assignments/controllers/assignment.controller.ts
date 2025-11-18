@@ -7,7 +7,7 @@ import Assignment, {
   type AssignmentAttributes,
 } from "../models/Assignment.ts";
 import getDayRange from "../../../utils /getDayRange.ts";
-import Client from "../../client/Client.ts";
+import Client from "../../client/models/Client.ts";
 import OrganizationStaff from "../../staff/models/OrganizationStaff.ts";
 import transformPrices from "../../../utils /transformPrices.ts";
 import { DateTime } from "luxon";
@@ -17,6 +17,7 @@ import User from "../../user/models/User.ts";
 import axios from "axios";
 import { octoApi } from "../../../constants/urls.ts";
 import { getBranchAndOrganization } from "../../../utils /getBranchAndOrganization.ts";
+import { clientActivityEvents } from "../../../events/clients/clientActivityEvents.ts";
 
 export const getListAssignments = async (
   req: Request,
@@ -223,6 +224,27 @@ export const createAssignment = async (
       payment_method: null,
       paid: "unpaid",
       timezone: branch.timezone,
+    });
+
+    clientActivityEvents.emitAssignmentCreated({
+      activity: {
+        id: newAssignment.id,
+        branch_id: newAssignment.branch_id,
+        date: newAssignment.assignment_date,
+        timezone: newAssignment.timezone,
+        paid_status: "success",
+        client_source_id: String(newAssignment.client_id),
+        total_price: newAssignment.final_price,
+        main_service: normalizedService,
+        additional_services: normalizedAdditional,
+        client_snapshot: {
+          first_name: client.first_name,
+          last_name: client.last_name || null,
+          phone: client.phone_number
+        },
+        createdAt: newAssignment.createdAt!,
+        updatedAt: newAssignment.updatedAt!,
+      }
     });
 
     return res.send({

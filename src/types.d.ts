@@ -61,6 +61,9 @@ export interface PaymentMethod {
   total: number;
 }
 
+export const PAYMENT_STATUS = ["success", "refund"] as const;
+export type PaymentStatus = (typeof PAYMENT_STATUS)[number];
+
 export interface CertificateInfo {
   certificate_number: string;
   amount: number;

@@ -1,9 +1,6 @@
 import express from "express";
-import ClientActivity from "./ClientActivity.ts";
 import { nanoid } from "nanoid";
-import Branch from "../organization/models/Branch.ts";
-import Client from "./Client.ts";
-import Organization from "../organization/models/Organization.ts";
+import Client from "./models/Client.ts";
 import type { Request, Response, NextFunction } from "express";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
@@ -17,10 +14,10 @@ ClientServiceRouter.get(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const clients = await Client.findAll();
-      const clientsActivity = await ClientActivity.findAll();
+      // const clientsActivity = await ClientActivity.findAll();
       return res.send({
         clients,
-        clientsActivity,
+        // clientsActivity,
       });
     } catch (e) {
       next(e);
@@ -50,19 +47,8 @@ ClientServiceRouter.post(
         where: { phone_number: phoneNumber },
       });
 
-      const existingBranch = await Branch.findByPk(branchId);
-      const existingOrg = await Organization.findByPk(organizationId);
-
       if (existingClient) {
         return res.status(400).json({ message: "Client already exists" });
-      }
-
-      if (!existingBranch) {
-        return res.status(400).json({ message: "Branch  not found" });
-      }
-
-      if (!existingOrg) {
-        return res.status(400).json({ message: "Organization not found" });
       }
 
       const source_id = `${source}_${Date.now()}_${nanoid(6)}`;
