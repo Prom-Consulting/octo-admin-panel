@@ -3,8 +3,7 @@ import { sequelize } from "../../../dbConfig/dbConfig.ts";
 import { nanoid } from "nanoid";
 
 export interface ClientAttributes {
-  id: number;
-  source_id: string; // telegram_id создан через календарь/месенджер или сам через онлайн запись на сайте. 	manual/calendar/phone
+  id: string; // telegram_id создан через календарь/месенджер или сам через онлайн запись на сайте. 	manual/calendar/phone
   first_name: string;
   last_name?: string | null;
   password: string;
@@ -18,15 +17,14 @@ export interface ClientAttributes {
 
 export type ClientCreationAttributes = Optional<
   ClientAttributes,
-  "id" | "createdAt" | "updatedAt" | "last_name" | "custom_name" | "username"
+"createdAt" | "updatedAt" | "last_name" | "custom_name" | "username"
 >;
 
 export class Client
   extends Model<ClientAttributes, ClientCreationAttributes>
   implements ClientAttributes
 {
-  declare id: number;
-  declare source_id: string;
+  declare id: string;
   declare first_name: string;
   declare password: string;
   declare last_name: string;
@@ -40,14 +38,9 @@ export class Client
 Client.init(
   {
     id: {
-      type: DataTypes.INTEGER,
-      autoIncrement: true,
-      primaryKey: true,
-    },
-    source_id: {
       type: DataTypes.TEXT,
       allowNull: false,
-      unique: true,
+      primaryKey: true,
     },
     first_name: { type: DataTypes.STRING, allowNull: false },
     last_name: { type: DataTypes.STRING, allowNull: true },
@@ -66,10 +59,10 @@ Client.init(
     sequelize,
     tableName: "clients",
     timestamps: true,
-    indexes: [{ unique: true, fields: ["source_id", "phone_number"] }],
+    indexes: [{ unique: true, fields: ["phone_number"] }],
   }
 );
 
-const generateClientId = async (source: string) => `${source}_${Date.now()}_${nanoid(6)}`;
+const generateClientId = async (source: string) => `${source}_${Date.now()}_${nanoid(16)}`;
 
 export default Client;

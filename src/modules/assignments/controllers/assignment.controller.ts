@@ -7,7 +7,6 @@ import Assignment, {
   type AssignmentAttributes,
 } from "../models/Assignment.ts";
 import getDayRange from "../../../utils /getDayRange.ts";
-import Client from "../../client/models/Client.ts";
 import OrganizationStaff from "../../staff/models/OrganizationStaff.ts";
 import transformPrices from "../../../utils /transformPrices.ts";
 import { DateTime } from "luxon";
@@ -86,7 +85,7 @@ export const createAssignment = async (
     const {
       organizationId,
       branchId,
-      clientId,
+      client,
       employeeId,
       service,
       additionalServices,
@@ -98,11 +97,19 @@ export const createAssignment = async (
     } = req.body;
 
     const user = req.user;
+    const token = req.headers.authorization!.split(" ")[1]!;
     const { branch, organization } = await getBranchAndOrganization(req, { required: true });
 
-    const client = await Client.findByPk(clientId);
-    if (!client) {
-      return res.status(404).json({ error: "Client not found" });
+    if (!organizationId  || !branchId || !assignmentDate || !startTime) {
+      return res.status(400).json({ error: "organization id, branch id, assignment date and start time is required" });
+    }
+
+    if (!client || !client.id || !client.firstname || !client.phoneNumber) {
+      return res.status(400).json({ error: "client is required" });
+    }
+
+    if (!service || !service.id || !service.duration) {
+      return res.status(400).json({ error: "service is required" });
     }
 
     let targetEmployeeId: number;
@@ -175,6 +182,7 @@ export const createAssignment = async (
       startTimeUTC,
       endTimeUTC
     );
+
     if (overlap) {
       return res.status(409).json({
         error: "The employee is already booked at this time",
@@ -190,9 +198,9 @@ export const createAssignment = async (
       end_time: endTimeUTC,
       client_id: client.id,
       client_snapshot: {
-        first_name: client.first_name,
-        last_name: client.last_name || null,
-        phone: client.phone_number,
+        first_name: client.firstname,
+        last_name: client.lastname || null,
+        phone_number: client.phoneNumber,
       },
       employee_id: employee.id,
       employee_snapshot: {
@@ -227,24 +235,8 @@ export const createAssignment = async (
     });
 
     clientActivityEvents.emitAssignmentCreated({
-      activity: {
-        id: newAssignment.id,
-        branch_id: newAssignment.branch_id,
-        date: newAssignment.assignment_date,
-        timezone: newAssignment.timezone,
-        paid_status: "success",
-        client_source_id: String(newAssignment.client_id),
-        total_price: newAssignment.final_price,
-        main_service: normalizedService,
-        additional_services: normalizedAdditional,
-        client_snapshot: {
-          first_name: client.first_name,
-          last_name: client.last_name || null,
-          phone: client.phone_number
-        },
-        createdAt: newAssignment.createdAt!,
-        updatedAt: newAssignment.updatedAt!,
-      }
+      assignment: newAssignment,
+      token: token,
     });
 
     return res.send({
@@ -498,7 +490,7 @@ export const editAssignment = async (
         client_snapshot: {
           first_name: client.first_name,
           last_name: client.last_name || null,
-          phone: client.phone,
+          phone: client.phone_number,
         },
         performed_by_id: assignment.employee_id,
         performed_by_snapshot: performedBy,
@@ -577,6 +569,7 @@ export const editAssignmentBasic = async (
     const { id } = req.params;
     const user = req.user!;
     const assignment = await Assignment.findByPk(id);
+    const token = req.headers.authorization!.split(" ")[1]!;
 
     if (!assignment) {
       return res.status(404).json({ error: "Assignment not found" });
@@ -674,6 +667,11 @@ export const editAssignmentBasic = async (
     if (endTime) updates.end_time = endDateTime.toUTC().toFormat("HH:mm");
 
     await assignment.update(updates);
+
+    clientActivityEvents.emitAssignmentUpdated({
+      assignment,
+      token,
+    });
 
     return res.json({ message: "Assignment updated successfully", data: assignment });
   } catch (e) {

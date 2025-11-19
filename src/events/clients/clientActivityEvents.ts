@@ -1,5 +1,5 @@
 import { EventEmitter } from "node:events";
-import type { ClientActivityAttributes } from "../../modules/client/models/ClientActivity.ts";
+import type { AssignmentAttributes } from "../../modules/assignments/models/Assignment.ts";
 
 export enum ClientActivityEventType {
   ASSIGNMENT_CREATE = "assignment:create",
@@ -7,7 +7,8 @@ export enum ClientActivityEventType {
 }
 
 export interface ClientActivityEventPayload {
-  activity: ClientActivityAttributes;
+  assignment: AssignmentAttributes;
+  token: string;
 }
 
 class ClientActivityEventEmitter extends EventEmitter {

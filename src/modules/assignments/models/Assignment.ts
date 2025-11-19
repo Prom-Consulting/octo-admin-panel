@@ -17,7 +17,7 @@ export interface AssignmentAttributes {
   branch_id: number;
   organization_id: number;
   gift_certificate_number: number | null;
-  client_id: number;
+  client_id: string;
   client_snapshot: ClientInfo;
   service_id: number;
   service_snapshot: ServiceInfo;
@@ -67,7 +67,7 @@ export class Assignment
   declare branch_id: number;
   declare gift_certificate_number: number | null;
   declare organization_id: number;
-  declare client_id: number;
+  declare client_id: string;
   declare client_snapshot: ClientInfo;
   declare manager_id: number | null;
   declare manager_snapshot: Employee | null;
@@ -100,7 +100,7 @@ Assignment.init(
       autoIncrement: true,
     },
     organization_id: { type: DataTypes.INTEGER, allowNull: false },
-    client_id: { type: DataTypes.INTEGER, allowNull: false },
+    client_id: { type: DataTypes.TEXT, allowNull: true },
     manager_id: { type: DataTypes.INTEGER, allowNull: true },
     employee_id: { type: DataTypes.INTEGER, allowNull: false },
     service_id: { type: DataTypes.INTEGER, allowNull: false },

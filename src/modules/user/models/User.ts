@@ -84,7 +84,7 @@ export const generateAccessTokenForUser = (user: UserCreationAttributes, organiz
       organization_name: organizationName,
     },
     JWT_SECRET,
-    { expiresIn: "15m" }
+    { expiresIn: "3d" }
   );
 };
 

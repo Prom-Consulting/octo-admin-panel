@@ -423,7 +423,7 @@ export default  AssignmentsServiceRoute;
  *         id: { type: integer, example: 1 }
  *         organization_id: { type: integer, example: 3 }
  *         branch_id: { type: integer, example: 2 }
- *         client_id: { type: integer, example: 12 }
+ *         client_id: { type: text, example: 12 }
  *         employee_id: { type: integer, example: 5 }
  *         client_snapshot:
  *           type: object
@@ -431,14 +431,14 @@ export default  AssignmentsServiceRoute;
  *           properties:
  *             first_name: { type: string, example: "Айгерим" }
  *             last_name: { type: string, example: "Токтосунова" }
- *             phone: { type: string, example: "+996500112233" }
+ *             phone_number: { type: string, example: "+996500112233" }
  *         employee_snapshot:
  *           type: object
  *           description: Данные сотрудника на момент записи
  *           properties:
  *             first_name: { type: string, example: "Эрлан" }
  *             last_name: { type: string, example: "Усенов" }
- *             role: { type: string, example: "Парикмахер" }
+ *             role: { type: string, example: "employee" }
  *         manager_snapshot:
  *           type: object
  *           nullable: true

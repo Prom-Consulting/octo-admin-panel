@@ -16,6 +16,7 @@ import OrganizationStaffAuthorizationRouter from "./modules/staff/routers/auth.s
 import WorkingDatesServiceRoute from "./modules/staff/routers/workingDates.service.ts";
 import AdminServiceRoute from "./modules/admin/routers";
 import AssignmentsBookingServiceRoute from "./modules/booking/assignmentsBooking.service.ts";
+import { setupClientActivityListeners } from "./events/clients/clientActivityListener.ts";
 
 config();
 
@@ -30,12 +31,13 @@ app.use(
         "https://instant-arlena-promconsulting-cb589535.koyeb.app",
         "http://localhost:5173",
         "http://localhost:5174",
-      ], // только для фронта на 3000 порту
-    methods: ["GET", "POST", "PUT", "DELETE"], // какие методы разрешены
-    credentials: true, // если надо передавать куки или токены
+      ],
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
+    credentials: true,
   })
 );
 app.use(express.json());
+void setupClientActivityListeners();
 app.use("/user", UserServiceRoute);
 app.use("/branches", BranchServiceRoute);
 app.use("/clients", ClientServiceRouter);
