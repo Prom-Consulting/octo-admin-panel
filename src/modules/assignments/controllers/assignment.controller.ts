@@ -17,6 +17,7 @@ import axios from "axios";
 import { octoApi } from "../../../constants/urls.ts";
 import { getBranchAndOrganization } from "../../../utils /getBranchAndOrganization.ts";
 import { clientActivityEvents } from "../../../events/clients/clientActivityEvents.ts";
+import { findOrCreateClient } from "../utils/createOrFindClient.ts";
 
 export const getListAssignments = async (
   req: Request,
@@ -97,20 +98,30 @@ export const createAssignment = async (
     } = req.body;
 
     const user = req.user;
-    const token = req.headers.authorization!.split(" ")[1]!;
-    const { branch, organization } = await getBranchAndOrganization(req, { required: true });
 
-    if (!organizationId  || !branchId || !assignmentDate || !startTime) {
-      return res.status(400).json({ error: "organization id, branch id, assignment date and start time is required" });
+    if (!organizationId || !branchId || !assignmentDate || !startTime) {
+      return res.status(400).json({
+        error: "organization id, branch id, assignment date and start time is required"
+      });
     }
 
-    if (!client || !client.id || !client.firstname || !client.phoneNumber) {
-      return res.status(400).json({ error: "client is required" });
+    const token = req.headers.authorization?.split(" ")[1] || null;
+
+    if (!client?.firstname || !client?.phoneNumber) {
+      return res.status(400).json({
+        error: "client firstname & phone required"
+      });
     }
 
-    if (!service || !service.id || !service.duration) {
-      return res.status(400).json({ error: "service is required" });
+    if (!service?.id || !service?.duration) {
+      return res.status(400).json({
+        error: "service with id and duration is required"
+      });
     }
+
+    const { branch, organization } = await getBranchAndOrganization(req, {
+      required: true
+    });
 
     let targetEmployeeId: number;
     if (user?.role === "employee") {
@@ -138,7 +149,21 @@ export const createAssignment = async (
       return res.status(404).json({ error: "Employee not found" });
     }
 
-    const discountValue = discount || 0;
+    const result = await findOrCreateClient(client, organization, user, token);
+
+    if (!result || !result.clientDb) {
+      return res.status(400).json({
+        error: "Failed to find or create client"
+      });
+    }
+
+    const { clientDb, finalToken, isOrgPerson } = result;
+
+    if (!clientDb) {
+      return res.status(400).json({
+        error: "Failed to find or create client"
+      });
+    }
 
     const normalizePrice = (s: ServiceInfo) => ({
       ...s,
@@ -152,23 +177,33 @@ export const createAssignment = async (
 
     const totalPrice =
       normalizedService.price +
-      normalizedAdditional.reduce((sum: number, s: ServiceInfo) => sum + s.price, 0);
+      normalizedAdditional.reduce((sum: number, s: ServiceInfo) =>
+        sum + s.price, 0
+      );
 
     const totalDuration =
       service.duration +
-      normalizedAdditional.reduce(
-        (sum: number, s: ServiceInfo) => sum + s.duration,
-        0
+      normalizedAdditional.reduce((sum: number, s: ServiceInfo) =>
+        sum + s.duration, 0
       );
 
+    const discountValue = Math.max(0, Math.min(100, discount || 0));
     const finalPrice = Math.max(
       0,
       Math.round(totalPrice - (totalPrice * discountValue) / 100)
     );
 
-    const startDateTime = DateTime.fromISO(`${assignmentDate}T${startTime}`, {
-      zone: branch.timezone,
-    });
+    const startDateTime = DateTime.fromISO(
+      `${assignmentDate}T${startTime}`,
+      { zone: branch.timezone }
+    );
+
+    if (!startDateTime.isValid) {
+      return res.status(400).json({
+        error: "Invalid date/time format",
+        details: startDateTime.invalidReason
+      });
+    }
 
     const endDateTime = startDateTime.plus({ minutes: totalDuration });
     const assignmentDateUTC = startDateTime.startOf("day").toUTC().toJSDate();
@@ -186,7 +221,12 @@ export const createAssignment = async (
     if (overlap) {
       return res.status(409).json({
         error: "The employee is already booked at this time",
-        details: { startTimeUTC, endTimeUTC, timezone: branch.timezone },
+        details: {
+          startTimeUTC,
+          endTimeUTC,
+          timezone: branch.timezone,
+          conflictingAssignment: overlap
+        },
       });
     }
 
@@ -196,11 +236,11 @@ export const createAssignment = async (
       assignment_date: assignmentDateUTC,
       start_time: startTimeUTC,
       end_time: endTimeUTC,
-      client_id: client.id,
+      client_id: clientDb.id,
       client_snapshot: {
-        first_name: client.firstname,
-        last_name: client.lastname || null,
-        phone_number: client.phoneNumber,
+        first_name: clientDb.first_name,
+        last_name: clientDb.last_name || null,
+        phone_number: clientDb.phone_number,
       },
       employee_id: employee.id,
       employee_snapshot: {
@@ -215,7 +255,7 @@ export const createAssignment = async (
         duration: normalizedService.duration,
       },
       additional_services:
-        additionalServices && normalizedAdditional.length > 0
+        normalizedAdditional.length > 0
           ? normalizedAdditional.map((s: ServiceInfo) => ({
             id: s.id,
             name: s.name,
@@ -225,8 +265,8 @@ export const createAssignment = async (
           : null,
       status: "new",
       notes: notes || null,
-      source,
-      discount: discount || 0,
+      source: source || "manual",
+      discount: discountValue,
       final_price: finalPrice,
       total_duration: totalDuration,
       payment_method: null,
@@ -236,14 +276,16 @@ export const createAssignment = async (
 
     clientActivityEvents.emitAssignmentCreated({
       assignment: newAssignment,
-      token: token,
+      token: finalToken,
+      organizationPerson: isOrgPerson,
     });
 
-    return res.send({
+    return res.status(201).json({
       success: true,
       data: newAssignment,
       message: "Assignment created successfully",
     });
+
   } catch (error) {
     console.error("Error creating assignment:", error);
     next(error);
@@ -686,7 +728,7 @@ export const payAssignment = async (
 ) => {
   try {
     const { id } = req.params;
-    const token = req.headers.authorization!.split(" ")[1];
+    const token = req.headers.authorization!.split(" ")[1]!;
     const assignment = await Assignment.findByPk(id);
     const user = req.user;
 
@@ -752,6 +794,10 @@ export const payAssignment = async (
     );
 
     await assignment.update(updates);
+    clientActivityEvents.emitAssignmentUpdated({
+      assignment,
+      token,
+    });
 
     return res.json({ message: "Assignment paid successfully", data: assignment });
   } catch (e) {
@@ -775,7 +821,7 @@ export const refundAssignment = async (
 ) => {
   try {
     const { id } = req.params;
-    const token = req.headers.authorization!.split(" ")[1];
+    const token = req.headers.authorization!.split(" ")[1]!;
     const assignment = await Assignment.findByPk(id);
 
     if (!assignment) return res.status(404).json({ error: "Assignment not found" });
@@ -795,6 +841,11 @@ export const refundAssignment = async (
     );
 
     await assignment.update({ paid: "refund" });
+
+    clientActivityEvents.emitAssignmentUpdated({
+      assignment,
+      token,
+    });
 
     return res.json({ message: "Assignment refunded successfully", data: assignment });
   } catch (e) {

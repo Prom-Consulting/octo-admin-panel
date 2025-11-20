@@ -8,15 +8,14 @@ import BranchServiceRoute from "./modules/organization/routers/branch.service.ts
 import { setupSwagger } from "../swagger.ts";
 import ClientServiceRouter from "./modules/client/client.service.ts";
 import OrganizationServiceRoute from "./modules/organization/routers/organization.service.ts";
-import BookingRoute from "./modules/booking/booking.service.ts";
 import AssignmentsServiceRoute from "./modules/assignments/routers/assignment.service.ts";
 import cookieParser from "cookie-parser";
 import StaffRouter from "./modules/staff/routers";
 import OrganizationStaffAuthorizationRouter from "./modules/staff/routers/auth.service.ts";
 import WorkingDatesServiceRoute from "./modules/staff/routers/workingDates.service.ts";
 import AdminServiceRoute from "./modules/admin/routers";
-import AssignmentsBookingServiceRoute from "./modules/booking/assignmentsBooking.service.ts";
 import { setupClientActivityListeners } from "./events/clients/clientActivityListener.ts";
+import BookingRoute from "./modules/booking/routers";
 
 config();
 
@@ -52,7 +51,6 @@ app.use("/admin", AdminServiceRoute);
 
 // booking routes
 app.use("/booking", BookingRoute);
-app.use("/booking", AssignmentsBookingServiceRoute);
 
 setupSwagger(app);
 

@@ -1,23 +1,17 @@
 import { clientActivityEvents, ClientActivityEventType } from "./clientActivityEvents.ts";
 import axios from "axios";
 import { octoApi } from "../../constants/urls.ts";
-import Client from "../../modules/client/models/Client.ts";
-
-type ClientStatus = "registered" | "unregistered";
 
 export const setupClientActivityListeners = () => {
   clientActivityEvents.onActivityEvent(
     ClientActivityEventType.ASSIGNMENT_CREATE,
-    async ({ assignment, token }) => {
+    async ({ assignment, token, organizationPerson }) => {
      try {
        console.log("Activity CREATED:");
-       let clientStatus: ClientStatus = "registered";
-       const existingClient = await Client.findByPk(assignment.client_id);
-
-       if (!existingClient) clientStatus = "unregistered";
+       const url = organizationPerson ? "client-activity" : "booking/client/activity";
 
        await axios.post(
-         `${octoApi}client-activity?branchId=${assignment.branch_id}`,
+         `${octoApi}${url}?branchId=${assignment.branch_id}`,
          {
            data: {
              id: assignment.id,
@@ -39,7 +33,6 @@ export const setupClientActivityListeners = () => {
              additional_services: assignment.additional_services,
              status: assignment.status,
            },
-           clientStatus,
            source: "calendar",
            source_type: "assignment"
          },
@@ -51,7 +44,7 @@ export const setupClientActivityListeners = () => {
          }
        );
        console.log(
-         `✅ Customer activity successfully created: ${assignment.client_snapshot.first_name}`
+         `✅ Client activity successfully created: ${assignment.client_snapshot.first_name}`
        );
      } catch (e) {
        if (axios.isAxiosError(e)) {
@@ -63,7 +56,7 @@ export const setupClientActivityListeners = () => {
            method: e.config?.method,
          });
        } else {
-         console.error("❌ Error create client activity on salary payment updated:", e);
+         console.error("❌ Error create client activity on calendar:", e);
        }
      }
 

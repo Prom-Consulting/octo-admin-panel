@@ -5,4 +5,5 @@ export const envConfig = cleanEnv(process.env, {
   ADMIN_PANEL_URL: str(),
   JWT_SECRET: str(),
   JWT_REFRESH_SECRET: str(),
+  ONE_TIME_JWT_SECRET: str(),
 });

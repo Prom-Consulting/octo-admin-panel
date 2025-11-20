@@ -9,6 +9,7 @@ export enum ClientActivityEventType {
 export interface ClientActivityEventPayload {
   assignment: AssignmentAttributes;
   token: string;
+  organizationPerson?: boolean;
 }
 
 class ClientActivityEventEmitter extends EventEmitter {
