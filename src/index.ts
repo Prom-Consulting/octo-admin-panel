@@ -6,7 +6,6 @@ import { dbConnection } from "./db";
 import UserServiceRoute from "./modules/user/routers";
 import BranchServiceRoute from "./modules/organization/routers/branch.service.ts";
 import { setupSwagger } from "../swagger.ts";
-import ClientServiceRouter from "./modules/client/client.service.ts";
 import OrganizationServiceRoute from "./modules/organization/routers/organization.service.ts";
 import AssignmentsServiceRoute from "./modules/assignments/routers/assignment.service.ts";
 import cookieParser from "cookie-parser";
@@ -16,6 +15,7 @@ import WorkingDatesServiceRoute from "./modules/staff/routers/workingDates.servi
 import AdminServiceRoute from "./modules/admin/routers";
 import { setupClientActivityListeners } from "./events/clients/clientActivityListener.ts";
 import BookingRoute from "./modules/booking/routers";
+import ClientIndexRouter from "./modules/client/routers";
 
 config();
 
@@ -39,7 +39,7 @@ app.use(express.json());
 void setupClientActivityListeners();
 app.use("/user", UserServiceRoute);
 app.use("/branches", BranchServiceRoute);
-app.use("/clients", ClientServiceRouter);
+app.use("/clients", ClientIndexRouter);
 app.use("/organizations", OrganizationServiceRoute);
 app.use("/assignments", AssignmentsServiceRoute);
 app.use("/staffAuthorization", OrganizationStaffAuthorizationRouter);
@@ -69,4 +69,4 @@ const run = async () => {
   });
 };
 
-void run();
+run().catch(console.error);

@@ -1,0 +1,139 @@
+import {
+  Client, type ClientAttributes,
+  generateAccessToken,
+  generateClientId,
+  generateRefreshToken, verifyAccessToken,
+  verifyRefreshToken,
+} from "../models/Client.ts";
+import bcrypt from "bcrypt";
+import type { NextFunction, Request, Response } from "express";
+import { refreshCookieOptions } from "../../../../config/cookie.ts";
+
+export const registerClient = async (req:Request, res:Response, next: NextFunction) => {
+  try {
+    const { firstname, lastname, phoneNumber, password } = req.body;
+    const source = "";
+
+    if (!firstname || !phoneNumber || !password) {
+      return res.status(400).json({ error: "First name, phone number and password is required" });
+    }
+
+    const existing = await Client.findOne({ where: { phone_number: phoneNumber } });
+    if (existing) {
+      return res.status(400).json({ message: "Client already exists" });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const id = generateClientId(source);
+
+    const client = await Client.create({
+      id,
+      first_name: firstname,
+      last_name: lastname || null,
+      phone_number: phoneNumber,
+      password: hashedPassword,
+      is_active: true,
+    });
+
+    const accessToken = generateAccessToken(client);
+    const refreshToken = generateRefreshToken(client.id);
+    await client.update({ token: accessToken });
+
+    const { password: _, phone_number: __, token: ___, ...clientData } = client.toJSON();
+
+    res.cookie("refreshToken", refreshToken, refreshCookieOptions );
+
+    return res.json({
+      client: clientData,
+      token: accessToken,
+    });
+
+  } catch (e) {
+    console.error("Register client error", e);
+    next(e);
+  }
+};
+
+export const loginClient = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { phoneNumber, password } = req.body;
+
+    const client = await Client.findOne({ where: { phone_number: phoneNumber }});
+    if (!client) {
+      return res.status(400).json({ message: "Client not found" });
+    }
+
+    const passValid = await bcrypt.compare(password, client.password);
+    if (!passValid) {
+      return res.status(400).json({ message: "Invalid password" });
+    }
+
+    const accessToken = generateAccessToken(client);
+    const refreshToken = generateRefreshToken(client.id);
+    await client.update({ token: refreshToken });
+
+    res.cookie("refreshToken", refreshToken, refreshCookieOptions );
+    const { password: _, phone_number: __, token: ___, ...clientData } = client.toJSON();
+
+    return res.json({
+      client: clientData,
+      token: accessToken,
+    });
+
+  } catch (e) {
+    console.error({ message: "login error" }, e);
+    next(e);
+  }
+};
+
+export const refreshClientToken = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const token = req.cookies.refreshToken;
+
+    if (!token) {
+      return res.status(401).json({ message: "No refresh token" });
+    }
+
+    const payload = verifyRefreshToken(token) as { id: string };
+    const client = await Client.findOne({ where: { id: payload.id } });
+
+    if (!client) return res.status(404).json({ error: "Client not found" });
+
+    const accessToken = generateAccessToken(client);
+    return res.json({ token: accessToken });
+
+  } catch (e) {
+    console.error({ error: "Invalid refresh token client" }, e);
+    next(e);
+  }
+};
+
+export const logoutClient = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const authHeader = req.headers["authorization"];
+    const token = authHeader && authHeader.split(" ")[1];
+
+    if (!token) {
+      return res.status(401).json({ message: "Logout successful" });
+    }
+
+    const clientData = verifyAccessToken(token) as ClientAttributes;
+
+    const client = await Client.findOne(
+      { where: { id: clientData.id } }
+    );
+
+    if (!client) {
+      return res.status(401).json({ message: "Logout successful", });
+    }
+
+    await client.update({ token: null });
+
+    res.clearCookie("refreshToken", refreshCookieOptions);
+
+    return res.status(200).json({ message: "Logout successful" });
+  } catch (e) {
+    console.error({error: "logout error client"}, e);
+   next(e);
+  }
+};
