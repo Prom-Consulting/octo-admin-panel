@@ -8,11 +8,24 @@ import {
 import bcrypt from "bcrypt";
 import type { NextFunction, Request, Response } from "express";
 import { refreshCookieOptions } from "../../../../config/cookie.ts";
+import { normalizePhone } from "../../../utils /phone/normalizePhone.ts";
+import axios from "axios";
+import { whatsappSendApi } from "../../../constants/urls.ts";
+import { generate6DigitCode } from "../../../utils /phone/sanitizePhone.ts";
 
-export const registerClient = async (req:Request, res:Response, next: NextFunction) => {
+interface OTPEntry {
+  phone: string;
+  code: string;
+  expiresAt: number;
+  status:boolean;
+}
+
+export const otpStore: OTPEntry[] = [];
+
+export const registerClientDev = async (req:Request, res:Response, next: NextFunction) => {
   try {
     const { firstname, lastname, phoneNumber, password } = req.body;
-    const source = "";
+    const source = "register";
 
     if (!firstname || !phoneNumber || !password) {
       return res.status(400).json({ error: "First name, phone number and password is required" });
@@ -30,7 +43,7 @@ export const registerClient = async (req:Request, res:Response, next: NextFuncti
       id,
       first_name: firstname,
       last_name: lastname || null,
-      phone_number: phoneNumber,
+      phone_number: normalizePhone(phoneNumber),
       password: hashedPassword,
       is_active: true,
     });
@@ -52,6 +65,27 @@ export const registerClient = async (req:Request, res:Response, next: NextFuncti
     console.error("Register client error", e);
     next(e);
   }
+};
+
+export const startRegister = async (req: Request, res: Response) => {
+  const { phoneNumber } = req.body;
+
+  if (!phoneNumber) return res.status(400).json({ message: "Phone required" });
+
+  const phone = normalizePhone(phoneNumber);
+  const code = generate6DigitCode();
+
+  const expiresAt = Date.now() + 5 * 60 * 1000;
+
+  otpStore.push({ phone, code, expiresAt, status: false });
+
+  await axios.post(whatsappSendApi, {
+    accountId: "cmi4fnc3u000qo208kcq09zkx",
+    message: `Ваш код подтверждения: ${code}`,
+    to: phone,
+  });
+
+  return res.json({ message: "Code sent" });
 };
 
 export const loginClient = async (req: Request, res: Response, next: NextFunction) => {
