@@ -3,6 +3,7 @@ import AdminModel, { generateAccessTokenForAdmin, generateRefreshTokenForAdmin }
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { JWT_REFRESH_SECRET, JWT_SECRET } from "../../../middleware/authUserMiddleware.ts";
+import { refreshCookieOptions } from "../../../../config/cookie.ts";
 
 export const adminLogin = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -33,8 +34,9 @@ export const adminLogin = async (req: Request, res: Response, next: NextFunction
     }
 
     const accessToken = generateAccessTokenForAdmin(admin);
-    admin.token = generateRefreshTokenForAdmin(admin);
-    await admin.save();
+    const refreshToken = generateRefreshTokenForAdmin(admin);
+    await admin.update({ token: refreshToken });
+    res.cookie("refreshToken", refreshToken, refreshCookieOptions );
 
     return res.status(200).json({
       success: true,
@@ -115,11 +117,7 @@ export const adminLogout = async (req: Request, res: Response, next: NextFunctio
 
     await admin.update({ token: null });
 
-    res.clearCookie("refreshToken", {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-    });
+    res.clearCookie("refreshToken", refreshCookieOptions);
 
     return res.status(200).json({
       success: true,

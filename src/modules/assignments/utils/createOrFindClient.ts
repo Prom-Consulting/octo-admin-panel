@@ -17,7 +17,7 @@ export const findOrCreateClient = async (
 
   let clientDb = await Client.findOne({ where });
   if (clientDb) return clientDb;
-  const isOrgPerson =  user && user.role !== "client";
+  const isOrgPerson = !!user;
 
   const url = isOrgPerson
     ? `${octoApi}organization-client/search`
@@ -39,7 +39,7 @@ export const findOrCreateClient = async (
     const response = await axios.get(url, {
       params: {
         firstname: clientData.firstname,
-        phoneNumber: clientData.phoneNumber,
+        phoneNumber: clientData.phoneNumber.replace(/\D+/g, ""),
         ...(clientData.lastname && { lastname: clientData.lastname }),
       },
       headers: {

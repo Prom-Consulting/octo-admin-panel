@@ -7,6 +7,7 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { JWT_REFRESH_SECRET, JWT_SECRET } from "../../../middleware/authUserMiddleware.ts";
 import type { UserToken } from "../../../types";
+import { refreshCookieOptions } from "../../../../config/cookie.ts";
 
 export const staffLogin = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -50,12 +51,7 @@ export const staffLogin = async (req: Request, res: Response, next: NextFunction
     const refreshToken = generateRefreshTokenForStaff(staff);
     await staff.update({ token: refreshToken });
 
-    res.cookie("refreshToken", refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
+    res.cookie("refreshToken", refreshToken, refreshCookieOptions );
 
     const { password: _, email: __, token: ___, ...staffData } = staff.toJSON();
 
@@ -92,11 +88,7 @@ export const staffLogout = async (req: Request, res: Response, next: NextFunctio
       { where: { id: staff.id } }
     );
 
-    res.clearCookie("refreshToken", {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-    });
+    res.clearCookie("refreshToken", refreshCookieOptions);
 
     return res.status(200).json({
       success: true,

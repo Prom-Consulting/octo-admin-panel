@@ -240,7 +240,7 @@ export const createAssignment = async (
       client_snapshot: {
         first_name: clientDb.first_name,
         last_name: clientDb.last_name || null,
-        phone_number: clientDb.phone_number,
+        phone_number: clientDb.phone_number.replace(/\D+/g, ""),
       },
       employee_id: employee.id,
       employee_snapshot: {
@@ -733,8 +733,11 @@ export const payAssignment = async (
     const user = req.user;
 
     if (!assignment) return res.status(404).json({ error: "Assignment not found" });
+    if (assignment.paid === "paid" || assignment.paid === "refund") {
+      return res.status(400).json({ message: "Paid or returned assignments cannot be edited" });
+    }
 
-    const { paymentMethod, discount, certificateNumber } = req.body;
+    const { paymentMethod, discount, certificateNumber, status } = req.body;
 
     if (!paymentMethod?.length) {
       return res.status(400).json({ error: "Payment method is required" });
@@ -754,6 +757,8 @@ export const payAssignment = async (
       payment_method: { methods: paymentMethod, total: totalPaid },
       final_price: finalPrice,
     };
+
+    if (status) updates.status = status;
 
     await axios.post(
       `${octoApi}accounting?branch_id=${assignment.branch_id}`,
@@ -825,6 +830,9 @@ export const refundAssignment = async (
     const assignment = await Assignment.findByPk(id);
 
     if (!assignment) return res.status(404).json({ error: "Assignment not found" });
+    if (assignment.paid === "refund") {
+      return res.status(400).json({ message: "Returned assignments cannot be edited" });
+    }
 
     await axios.patch(
       `${octoApi}accounting/refund/${assignment.id}?branchId=${assignment.branch_id}`,
