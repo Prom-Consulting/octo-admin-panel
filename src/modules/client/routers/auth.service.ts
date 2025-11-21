@@ -18,7 +18,7 @@ ClientAuthServiceRouter.delete("/logout", logoutClient);
  * @openapi
  * tags:
  *   - name: ClientAuth
- *     description: Client authentication and authorization
+ *     description: Авторизация и аутентификация клиентов
  */
 
 /**
@@ -27,11 +27,11 @@ ClientAuthServiceRouter.delete("/logout", logoutClient);
  *   schemas:
  *     Client:
  *       type: object
- *       description: Client entity
+ *       description: Сущность клиента
  *       properties:
  *         id:
  *           type: string
- *           description: Unique client ID (generated from calendar/phone/online booking)
+ *           description: Уникальный ID клиента (создан через календарь/мессенджер или онлайн-запись)
  *
  *         first_name:
  *           type: string
@@ -42,17 +42,17 @@ ClientAuthServiceRouter.delete("/logout", logoutClient);
  *
  *         password:
  *           type: string
- *           description: Hashed client password
+ *           description: Хэшированный пароль клиента
  *
  *         custom_name:
  *           type: string
  *           nullable: true
- *           description: Custom name from integrations
+ *           description: Кастомное имя, полученное из интеграций
  *
  *         username:
  *           type: string
  *           nullable: true
- *           description: Username from integrations (e.g. Telegram)
+ *           description: Username из внешних интеграций (например, Telegram)
  *
  *         phone_number:
  *           type: string
@@ -60,7 +60,7 @@ ClientAuthServiceRouter.delete("/logout", logoutClient);
  *         token:
  *           type: string
  *           nullable: true
- *           description: Device access token stored in DB
+ *           description: Access-токен устройства, сохранённый в базе
  *
  *         is_active:
  *           type: boolean
@@ -79,7 +79,7 @@ ClientAuthServiceRouter.delete("/logout", logoutClient);
  * /clients/auth/register-dev:
  *   post:
  *     tags: [ClientAuth]
- *     summary: Register client (dev mode, without OTP)
+ *     summary: Регистрация клиента (dev-режим, без OTP)
  *     requestBody:
  *       required: true
  *       content:
@@ -93,7 +93,7 @@ ClientAuthServiceRouter.delete("/logout", logoutClient);
  *             password: "123"
  *     responses:
  *       200:
- *         description: Client successfully registered
+ *         description: Клиент успешно зарегистрирован
  *         content:
  *           application/json:
  *             example:
@@ -107,7 +107,7 @@ ClientAuthServiceRouter.delete("/logout", logoutClient);
  *                 custom_name: null
  *                 token: "token"
  *       400:
- *         description: Missing required fields or client exists
+ *         description: Отсутствуют обязательные поля или клиент уже существует
  */
 
 /**
@@ -115,7 +115,7 @@ ClientAuthServiceRouter.delete("/logout", logoutClient);
  * /clients/auth:
  *   post:
  *     tags: [ClientAuth]
- *     summary: Login client using phone number and password
+ *     summary: Авторизация клиента по номеру телефона и паролю
  *     requestBody:
  *       required: true
  *       content:
@@ -129,13 +129,13 @@ ClientAuthServiceRouter.delete("/logout", logoutClient);
  *             password: "123"
  *     responses:
  *       200:
- *         description: Successfully logged in
+ *         description: Успешный вход в систему
  *         content:
  *           application/json:
  *             schema:
  *               $ref: "#/components/schemas/Client"
  *       400:
- *         description: Invalid phone or password
+ *         description: Неверный номер телефона или пароль
  */
 
 /**
@@ -143,18 +143,18 @@ ClientAuthServiceRouter.delete("/logout", logoutClient);
  * /clients/auth/refresh:
  *   post:
  *     tags: [ClientAuth]
- *     summary: Refresh client's access token
+ *     summary: Обновление access-токена клиента
  *     responses:
  *       200:
- *         description: New access token
+ *         description: Новый access-токен
  *         content:
  *           application/json:
  *             example:
  *               token: "token"
  *       401:
- *         description: No refresh token provided
+ *         description: Refresh-токен отсутствует
  *       404:
- *         description: Client not found
+ *         description: Клиент не найден
  */
 
 /**
@@ -162,14 +162,14 @@ ClientAuthServiceRouter.delete("/logout", logoutClient);
  * /clients/auth/logout:
  *   delete:
  *     tags: [ClientAuth]
- *     summary: Logout client and clear refresh tokens
+ *     summary: Выход клиента из системы и очистка refresh-токена
  *     security:
  *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: Logout successful
+ *         description: Успешный выход
  *       401:
- *         description: Not authorized or already logged out
+ *         description: Не авторизован или уже выполнен выход
  */
 
 
