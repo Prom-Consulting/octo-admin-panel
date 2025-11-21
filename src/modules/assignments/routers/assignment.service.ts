@@ -415,7 +415,14 @@ export default  AssignmentsServiceRoute;
 /**
  * @swagger
  * components:
+ *   securitySchemes:
+ *     bearerAuth:
+ *       type: http
+ *       scheme: bearer
+ *       bearerFormat: JWT
+ *
  *   schemas:
+ *
  *     Assignment:
  *       type: object
  *       description: Подробная информация о назначении клиента к сотруднику.
@@ -423,70 +430,70 @@ export default  AssignmentsServiceRoute;
  *         id: { type: integer, example: 1 }
  *         organization_id: { type: integer, example: 3 }
  *         branch_id: { type: integer, example: 2 }
- *         client_id: { type: integer, example: 12 }
+ *         client_id: { type: string, example: "12" }
  *         employee_id: { type: integer, example: 5 }
+ *
  *         client_snapshot:
  *           type: object
- *           description: Данные клиента на момент записи
  *           properties:
- *             first_name: { type: string, example: "Айгерим" }
- *             last_name: { type: string, example: "Токтосунова" }
- *             phone: { type: string, example: "+996500112233" }
+ *             first_name: { type: string }
+ *             last_name: { type: string, nullable: true }
+ *             phone_number: { type: string }
+ *
  *         employee_snapshot:
  *           type: object
- *           description: Данные сотрудника на момент записи
- *           properties:
- *             first_name: { type: string, example: "Эрлан" }
- *             last_name: { type: string, example: "Усенов" }
- *             role: { type: string, example: "Парикмахер" }
- *         manager_snapshot:
- *           type: object
- *           nullable: true
- *           description: Данные администратора, внесшего изменения
  *           properties:
  *             first_name: { type: string }
  *             last_name: { type: string }
  *             role: { type: string }
- *         service_snapshot:
+ *
+ *         manager_snapshot:
  *           type: object
- *           description: Основная услуга
+ *           nullable: true
  *           properties:
- *             name: { type: string, example: "Стрижка" }
- *             price: { type: number, example: 800 }
- *             duration: { type: integer, example: 60 }
+ *             first_name: { type: string }
+ *             last_name: { type: string }
+ *             role: { type: string }
+ *
+ *         service_snapshot:
+ *           $ref: '#/components/schemas/ServiceInfo'
+ *
  *         additional_services:
  *           type: array
  *           nullable: true
- *           description: Дополнительные услуги
  *           items:
  *             $ref: '#/components/schemas/ServiceInfo'
- *         assignment_date: { type: string, format: date-time, example: "2025-10-25T03:00:00.000Z" }
- *         start_time: { type: string, example: "09:00" }
- *         end_time: { type: string, example: "10:30" }
+ *
+ *         assignment_date: { type: string, format: date-time }
+ *         start_time: { type: string }
+ *         end_time: { type: string }
+ *
  *         status:
  *           type: string
  *           enum: [new, pending, confirmed, completed, cancelled]
- *           example: "new"
+ *
  *         paid:
  *           type: string
  *           enum: [paid, unpaid, refund]
- *           example: "unpaid"
+ *
  *         payment_method:
  *           type: object
  *           nullable: true
- *           description: Способ оплаты, если запись оплачена
  *           properties:
  *             methods:
  *               type: array
- *               items: { $ref: '#/components/schemas/PaymentMethod' }
- *             total: { type: number, example: 1500 }
- *         discount: { type: number, example: 10 }
- *         final_price: { type: number, example: 1350 }
- *         total_duration: { type: integer, example: 90 }
- *         timezone: { type: string, example: "Asia/Bishkek" }
- *         notes: { type: string, nullable: true, example: "Просьба не опаздывать" }
+ *               items:
+ *                 $ref: '#/components/schemas/PaymentMethod'
+ *             total: { type: number }
+ *
+ *         discount: { type: number }
+ *         final_price: { type: number }
+ *         total_duration: { type: integer }
+ *         timezone: { type: string }
+ *         notes: { type: string, nullable: true }
  *         createdAt: { type: string, format: date-time }
  *         updatedAt: { type: string, format: date-time }
+ *
  *
  *     PaymentMethod:
  *       type: object
@@ -494,27 +501,53 @@ export default  AssignmentsServiceRoute;
  *         type:
  *           type: string
  *           enum: [cash, card, transfer, gift_certificate, other]
- *           example: "card"
- *         amount: { type: number, example: 1500 }
- *         name: { type: string, nullable: true, example: "VISA" }
+ *         amount: { type: number }
+ *         name: { type: string, nullable: true }
+ *
  *
  *     CreateAssignmentDto:
  *       type: object
- *       required: [organizationId, branchId, clientId, employeeId, service, assignmentDate, startTime]
+ *       required:
+ *         - organizationId
+ *         - branchId
+ *         - client
+ *         - employeeId
+ *         - service
+ *         - assignmentDate
+ *         - startTime
  *       properties:
  *         organizationId: { type: integer }
  *         branchId: { type: integer }
- *         clientId: { type: integer }
+ *
+ *         client:
+ *           type: object
+ *           properties:
+ *             id: { type: string }
+ *             firstname: { type: string }
+ *             phoneNumber: { type: string }
+ *
  *         employeeId: { type: integer }
- *         service: { $ref: '#/components/schemas/ServiceInfo' }
+ *         assignmentDate: { type: string, format: date }
+ *         startTime: { type: string }
+ *         endTime: { type: string, nullable: true }
+ *         notes: { type: string }
+ *         source: { type: string }
+ *         discount: { type: number }
+ *         paid:
+ *           type: string
+ *           enum: [paid, unpaid]
+ *         certificateNumber: { type: string }
+ *         paymentMethod:
+ *           type: array
+ *           items:
+ *             $ref: '#/components/schemas/PaymentMethod'
+ *         service:
+ *           $ref: '#/components/schemas/ServiceInfo'
  *         additionalServices:
  *           type: array
- *           items: { $ref: '#/components/schemas/ServiceInfo' }
- *         assignmentDate: { type: string, format: date, example: "2025-10-25" }
- *         startTime: { type: string, example: "09:00" }
- *         notes: { type: string, nullable: true }
- *         source: { type: string, example: "manual" }
- *         discount: { type: number, example: 10 }
+ *           items:
+ *             $ref: '#/components/schemas/ServiceInfo'
+ *
  *
  *     UpdateAssignmentDto:
  *       type: object
@@ -522,21 +555,26 @@ export default  AssignmentsServiceRoute;
  *         service: { $ref: '#/components/schemas/ServiceInfo' }
  *         additionalServices:
  *           type: array
- *           items: { $ref: '#/components/schemas/ServiceInfo' }
+ *           items:
+ *             $ref: '#/components/schemas/ServiceInfo'
  *         assignmentDate: { type: string, format: date }
  *         startTime: { type: string }
  *         endTime: { type: string }
  *         employeeId: { type: integer }
  *         notes: { type: string }
- *         status: { type: string, enum: [new, pending, confirmed, completed, cancelled] }
+ *         status:
+ *           type: string
+ *           enum: [new, pending, confirmed, completed, cancelled]
  *         discount: { type: number }
- *         paid: { type: string, enum: [paid, unpaid, refund] }
+ *         paid:
+ *           type: string
+ *           enum: [paid, unpaid, refund]
  *         paymentMethod:
  *           type: array
- *           items: { $ref: '#/components/schemas/PaymentMethod' }
- *         certificateNumber:
- *           type: string
- *           description: Номер подарочного сертификата (если выбран способ оплаты gift_certificate)
+ *           items:
+ *             $ref: '#/components/schemas/PaymentMethod'
+ *         certificateNumber: { type: string }
+ *
  *
  *     ServiceInfo:
  *       type: object
@@ -546,14 +584,9 @@ export default  AssignmentsServiceRoute;
  *         price: { type: number }
  *         duration: { type: integer }
  *
+ *
  *     ErrorResponse:
  *       type: object
  *       properties:
  *         error: { type: string, example: "Branch not found" }
- *
- *   securitySchemes:
- *     bearerAuth:
- *       type: http
- *       scheme: bearer
- *       bearerFormat: JWT
  */

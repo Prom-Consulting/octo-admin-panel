@@ -42,7 +42,7 @@ export interface ServiceInfo {
 export interface ClientInfo {
   first_name: string;
   last_name?: string | null;
-  phone: string;
+  phone_number: string;
 }
 
 export interface OrganizationInfo {
@@ -60,6 +60,9 @@ export interface PaymentMethod {
   methods: PaymentPart[];
   total: number;
 }
+
+export const PAYMENT_STATUS = ["success", "refund"] as const;
+export type PaymentStatus = (typeof PAYMENT_STATUS)[number];
 
 export interface CertificateInfo {
   certificate_number: string;
@@ -84,4 +87,21 @@ export interface OrganizationCreate {
   branches: number;
   paidDate: Date;
   isActive: boolean;
+}
+
+export interface ClientActivity {
+  id: number;
+  client_source_id: string;
+  client_snapshot: ClientInfoAttributes;
+  branch_id: number;
+  main_service: ServiceInfo;
+  additional_services?: ServiceInfo[];
+  paid_status: PaymentStatus | null;
+  status: AssignmentStatus;
+  total_price: number;
+  // activity_hash: string;
+  date: Date;
+  timezone: string;
+  createdAt?: Date;
+  updatedAt?: Date;
 }

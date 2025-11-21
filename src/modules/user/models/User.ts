@@ -1,6 +1,5 @@
 import { DataTypes, Model, type Optional } from "sequelize";
 import { sequelize } from "../../../dbConfig/dbConfig.ts";
-import crypto from "crypto";
 import jwt from "jsonwebtoken";
 import { JWT_REFRESH_SECRET, JWT_SECRET } from "../../../middleware/authUserMiddleware.ts";
 
@@ -11,7 +10,7 @@ export interface UserAttributes {
   role: string;
   email: string;
   password: string;
-  token?: string;
+  token?: string | null;
   isActive: boolean;
   createdAt?: Date;
   updatedAt?: Date;
@@ -32,7 +31,7 @@ export class User
   declare role: string;
   declare email: string;
   declare password: string;
-  declare token: string;
+  declare token: string | null;
   declare isActive: boolean;
   declare readonly createdAt: Date;
   declare readonly updatedAt: Date;
@@ -56,8 +55,7 @@ User.init(
     password: { type: DataTypes.STRING(255), allowNull: false, },
     token: {
       type: DataTypes.TEXT,
-      allowNull: false,
-      defaultValue: () => crypto.randomBytes(32).toString("hex"),
+      allowNull: true,
     },
     isActive: {
       type: DataTypes.BOOLEAN,
@@ -84,7 +82,7 @@ export const generateAccessTokenForUser = (user: UserCreationAttributes, organiz
       organization_name: organizationName,
     },
     JWT_SECRET,
-    { expiresIn: "15m" }
+    { expiresIn: "3d", header: { kid: "user", alg: "HS256" } }
   );
 };
 

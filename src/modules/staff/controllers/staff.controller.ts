@@ -127,11 +127,20 @@ export const createStaff = async (req: Request, res: Response, next: NextFunctio
 
     const { organization } = await getBranchAndOrganization(req, { organization: true });
 
-    if (!firstname || !lastname || !password || !email) {
+    if (!firstname || !lastname) {
       return res.status(400).json({
         success: false,
-        message: "firstname, lastname, password, and email are required",
+        message: "firstname and lastname are required",
       });
+    }
+
+    if (role !== "manager") {
+      if (!email || !password) {
+        return res.status(400).json({
+          success: false,
+          message: "email and password are required for non-manager roles",
+        });
+      }
     }
 
     const branchValidation = await validateBranches(branches, organization.id);
@@ -149,15 +158,18 @@ export const createStaff = async (req: Request, res: Response, next: NextFunctio
       });
     }
 
-    const existingStaff = await OrganizationStaff.findOne({
-      where: { email },
-      attributes: ["id", "email"],
-    });
-    if (existingStaff) {
-      return res.status(409).json({
-        success: false,
-        message: "User with this email already exists",
+    if (email) {
+      const existingStaff = await OrganizationStaff.findOne({
+        where: { email },
+        attributes: ["id", "email"],
       });
+
+      if (existingStaff) {
+        return res.status(409).json({
+          success: false,
+          message: "User with this email already exists",
+        });
+      }
     }
 
     const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);

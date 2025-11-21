@@ -6,16 +6,16 @@ import { dbConnection } from "./db";
 import UserServiceRoute from "./modules/user/routers";
 import BranchServiceRoute from "./modules/organization/routers/branch.service.ts";
 import { setupSwagger } from "../swagger.ts";
-import ClientServiceRouter from "./modules/client/client.service.ts";
 import OrganizationServiceRoute from "./modules/organization/routers/organization.service.ts";
-import BookingRoute from "./modules/booking/booking.service.ts";
 import AssignmentsServiceRoute from "./modules/assignments/routers/assignment.service.ts";
 import cookieParser from "cookie-parser";
 import StaffRouter from "./modules/staff/routers";
 import OrganizationStaffAuthorizationRouter from "./modules/staff/routers/auth.service.ts";
 import WorkingDatesServiceRoute from "./modules/staff/routers/workingDates.service.ts";
 import AdminServiceRoute from "./modules/admin/routers";
-import AssignmentsBookingServiceRoute from "./modules/booking/assignmentsBooking.service.ts";
+import { setupClientActivityListeners } from "./events/clients/clientActivityListener.ts";
+import BookingRoute from "./modules/booking/routers";
+import ClientIndexRouter from "./modules/client/routers";
 
 config();
 
@@ -30,15 +30,16 @@ app.use(
         "https://instant-arlena-promconsulting-cb589535.koyeb.app",
         "http://localhost:5173",
         "http://localhost:5174",
-      ], // только для фронта на 3000 порту
-    methods: ["GET", "POST", "PUT", "DELETE"], // какие методы разрешены
-    credentials: true, // если надо передавать куки или токены
+      ],
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
+    credentials: true,
   })
 );
 app.use(express.json());
+void setupClientActivityListeners();
 app.use("/user", UserServiceRoute);
 app.use("/branches", BranchServiceRoute);
-app.use("/clients", ClientServiceRouter);
+app.use("/clients", ClientIndexRouter);
 app.use("/organizations", OrganizationServiceRoute);
 app.use("/assignments", AssignmentsServiceRoute);
 app.use("/staffAuthorization", OrganizationStaffAuthorizationRouter);
@@ -50,7 +51,6 @@ app.use("/admin", AdminServiceRoute);
 
 // booking routes
 app.use("/booking", BookingRoute);
-app.use("/booking", AssignmentsBookingServiceRoute);
 
 setupSwagger(app);
 
@@ -69,4 +69,4 @@ const run = async () => {
   });
 };
 
-void run();
+run().catch(console.error);

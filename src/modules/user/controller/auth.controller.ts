@@ -4,7 +4,8 @@ import type { WhereOptions } from "sequelize";
 import Organization, { type OrganizationAttributes } from "../../organization/models/Organization.ts";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import { JWT_REFRESH_SECRET } from "../../../middleware/authUserMiddleware.ts";
+import { JWT_REFRESH_SECRET, JWT_SECRET } from "../../../middleware/authUserMiddleware.ts";
+import { refreshCookieOptions } from "../../../../config/cookie.ts";
 
 export const userLogin = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -57,13 +58,14 @@ export const userLogin = async (req: Request, res: Response, next: NextFunction)
     const refreshToken = generateRefreshTokenForUser(user);
     await user.update({token: refreshToken});
 
-    res.cookie("refreshToken", refreshToken, {
-      httpOnly: true,
-      // secure: process.env.NODE_ENV === "production",
-      sameSite: "none",
-      secure: true,
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
+    res.cookie("refreshToken", refreshToken, refreshCookieOptions );
+
+    // res.cookie("refreshToken", refreshToken, {
+    //   httpOnly: true,
+    //   secure: process.env.NODE_ENV === "production",
+    //   sameSite: "strict",
+    //   maxAge: 7 * 24 * 60 * 60 * 1000,
+    // });
 
     return res.status(200).json({
       success: true,
@@ -130,16 +132,29 @@ export const userRefreshToken = async (req: Request, res: Response, next: NextFu
 
 export const userLogout = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    res.clearCookie("refreshToken", {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-    });
+    const authHeader = req.headers["authorization"];
+    const token = authHeader && authHeader.split(" ")[1];
 
-    return res.status(200).json({
-      success: true,
-      message: "Logged out successfully",
-    });
+    if (!token) {
+      return res.status(401).json({ message: "Logout successful" });
+    }
+
+    const userData = jwt.verify(token, JWT_SECRET) as { id: number };
+
+    const user = await User.findOne(
+      { where: { id: userData.id } }
+    );
+
+    console.log(user?.dataValues);
+
+    if (!user) {
+      return res.status(401).json({ message: "Logout successful", });
+    }
+
+    await user.update({ token: null });
+    res.clearCookie("refreshToken", refreshCookieOptions);
+
+    return res.status(200).json({ message: "Logout successful" });
   } catch (e) {
     console.error("Logout error:", e);
     next(e);
