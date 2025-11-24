@@ -9,7 +9,7 @@ const ClientIndexRouter = express.Router();
 ClientIndexRouter.use("/auth", ClientAuthServiceRouter );
 
 ClientIndexRouter.use(authClientMiddleware);
-ClientIndexRouter.use("/", ClientServiceRouter);
+ClientIndexRouter.use("/me", ClientServiceRouter);
 ClientIndexRouter.use("/assignments", ClientAssigmentRoute);
 
 export default ClientIndexRouter;

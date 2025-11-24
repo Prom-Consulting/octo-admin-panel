@@ -1,11 +1,10 @@
 import {
-  Client, type ClientAttributes,
+  Client, type ClientAttributes, clientPasswordVerification,
   generateAccessToken,
   generateClientId,
-  generateRefreshToken, verifyAccessToken,
+  generateRefreshToken, hashClientPassword, verifyAccessToken,
   verifyRefreshToken,
 } from "../models/Client.ts";
-import bcrypt from "bcrypt";
 import type { NextFunction, Request, Response } from "express";
 import { refreshCookieOptions } from "../../../../config/cookie.ts";
 import { normalizePhone } from "../../../utils /phone/normalizePhone.ts";
@@ -37,7 +36,7 @@ export const registerClientDev = async (req:Request, res:Response, next: NextFun
       return res.status(400).json({ message: "Client already exists" });
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = await hashClientPassword(password);
     const id = generateClientId(source);
 
     const client = await Client.create({
@@ -98,7 +97,7 @@ export const loginClient = async (req: Request, res: Response, next: NextFunctio
       return res.status(400).json({ message: "Client not found" });
     }
 
-    const passValid = await bcrypt.compare(password, client.password);
+    const passValid = await clientPasswordVerification(password, client.password);
     if (!passValid) {
       return res.status(400).json({ message: "Invalid password" });
     }
