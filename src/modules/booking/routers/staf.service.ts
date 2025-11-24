@@ -13,7 +13,7 @@ export default BookingStaffRoute;
  *   get:
  *     summary: Получить список сотрудников организации
  *     description: organizationId обязателен если нет branchId и наоборот.
- *     tags: [Booking staff and auth]
+ *     tags: [Booking staff and temporary token]
  *     parameters:
  *       - in: query
  *         name: organizationId

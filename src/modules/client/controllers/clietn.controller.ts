@@ -33,7 +33,7 @@ export const getClients = async (req: Request, res: Response, next: NextFunction
       limit,
       offset,
       order: [["createdAt", "ASC"]],
-      attributes: { exclude: ["password", "token", "phone_number"] },
+      attributes: { exclude: ["password", "token"] },
     });
 
     res.json({

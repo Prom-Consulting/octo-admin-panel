@@ -4,9 +4,8 @@ import { config } from "dotenv";
 import { logger } from "./logger";
 import { dbConnection } from "./db";
 import UserServiceRoute from "./modules/user/routers";
-import BranchServiceRoute from "./modules/organization/routers/branch.service.ts";
+import BranchServiceRoute from "./modules/organization/routers/branch/branch.service.ts";
 import { setupSwagger } from "../swagger.ts";
-import OrganizationServiceRoute from "./modules/organization/routers/organization.service.ts";
 import AssignmentsServiceRoute from "./modules/assignments/routers/assignment.service.ts";
 import cookieParser from "cookie-parser";
 import StaffRouter from "./modules/staff/routers";
@@ -16,6 +15,7 @@ import AdminServiceRoute from "./modules/admin/routers";
 import { setupClientActivityListeners } from "./events/clients/clientActivityListener.ts";
 import BookingRoute from "./modules/booking/routers";
 import ClientIndexRouter from "./modules/client/routers";
+import OrganizationIndexRouter from "./modules/organization/routers/organization";
 
 config();
 
@@ -40,7 +40,7 @@ void setupClientActivityListeners();
 app.use("/user", UserServiceRoute);
 app.use("/branches", BranchServiceRoute);
 app.use("/clients", ClientIndexRouter);
-app.use("/organizations", OrganizationServiceRoute);
+app.use("/organizations", OrganizationIndexRouter);
 app.use("/assignments", AssignmentsServiceRoute);
 app.use("/staffAuthorization", OrganizationStaffAuthorizationRouter);
 app.use("/staff", StaffRouter);

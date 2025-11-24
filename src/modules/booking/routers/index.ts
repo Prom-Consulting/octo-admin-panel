@@ -16,8 +16,8 @@ BookingRoute.use("/staff", BookingStaffRoute);
 /**
  * @openapi
  * tags:
- *   - name: Booking staff and auth
- *     description:
+ *   - name: Booking staff and temporary token
+ *     description: Общий роут для всех клиентов
  */
 
 /**
@@ -26,10 +26,10 @@ BookingRoute.use("/staff", BookingStaffRoute);
  *   get:
  *     summary: Получение гостевого токена
  *     description:
- *       Генерирует одноразовый токен для гостей (без авторизации).
+ *       Генерирует одноразовый токен
  *       Токен используется для доступа к тенантной базы данных
  *     tags:
- *       - Booking staff and auth
+ *       - Booking staff and temporary token
  *     parameters:
  *       - in: path
  *         name: organizationId

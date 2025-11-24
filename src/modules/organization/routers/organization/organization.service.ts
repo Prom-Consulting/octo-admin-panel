@@ -1,13 +1,10 @@
 import express from "express";
-import { getListOrganizations, getOrganizationByID } from "../controllers/organization.controller.ts";
-import { authenticateToken, authorizeRoles } from "../../../middleware/authUserMiddleware.ts";
-import { checkOrganizationMiddleware } from "../../../middleware/checkOrganizationMiddleware.ts";
+import { getListOrganizations, getOrganizationByID } from "../../controllers/organization.controller.ts";
+import { authorizeRoles } from "../../../../middleware/authUserMiddleware.ts";
+import { checkOrganizationMiddleware } from "../../../../middleware/checkOrganizationMiddleware.ts";
 
 const OrganizationServiceRoute = express.Router();
-OrganizationServiceRoute.use(
-  authenticateToken,
-  authorizeRoles("owner"),
-);
+OrganizationServiceRoute.use(authorizeRoles("owner"));
 
 OrganizationServiceRoute.get("/", getListOrganizations);
 OrganizationServiceRoute.get("/:organizationId", checkOrganizationMiddleware, getOrganizationByID);

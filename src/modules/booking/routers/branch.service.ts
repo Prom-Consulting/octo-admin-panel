@@ -10,7 +10,7 @@ BookingBranchRoute.get("/:id", getBranchById);
  * @openapi
  * tags:
  *   - name: Booking Branch
- *     description: Управление филиалами организации (только для владельцев и менеджеров)
+ *     description: Филиалы. Общий роут для всех клиентов
  */
 
 /**

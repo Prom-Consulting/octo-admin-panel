@@ -5,9 +5,9 @@ import {
   getBranchById,
   getBranches, getBranchWithOrganization,
   updateBranch,
-} from "../controllers/branch.controllers.ts";
-import { authenticateToken, authorizeRoles } from "../../../middleware/authUserMiddleware.ts";
-import { checkBranchMiddleware, checkOrganizationMiddleware } from "../../../middleware/checkOrganizationMiddleware.ts";
+} from "../../controllers/branch.controllers.ts";
+import { authenticateToken, authorizeRoles } from "../../../../middleware/authUserMiddleware.ts";
+import { checkBranchMiddleware, checkOrganizationMiddleware } from "../../../../middleware/checkOrganizationMiddleware.ts";
 
 const BranchServiceRoute = express.Router();
 

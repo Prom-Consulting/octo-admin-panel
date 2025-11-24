@@ -9,7 +9,7 @@ AssignmentsBookingServiceRoute.post("/", createAssignment);
  * @swagger
  * tags:
  *   - name: Booking assignments
- *     description: Создание записи клиента на странице booking
+ *     description: Создание записи клиента без аккаунта на странице booking.
  */
 
 /**

@@ -10,7 +10,7 @@ BookingOrganizationRoute.get("/:id", getOrganizationByID);
  * @swagger
  * tags:
  *   name: Booking Organizations
- *   description: Список организаций
+ *   description: Список организаций. Общий роут для всех клиентов
  */
 
 /**
