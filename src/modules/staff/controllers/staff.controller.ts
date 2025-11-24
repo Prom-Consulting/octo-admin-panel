@@ -12,12 +12,13 @@ const SALT_ROUNDS = 10;
 
 export const getListStaff = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { organizationId, role } = req.query;
+    const { organizationId, role, branchId } = req.query;
+    const user = req.user;
 
-    if (!organizationId || typeof organizationId !== "string") {
+    if (!organizationId && !branchId) {
       return res.status(400).json({
         success: false,
-        message: "organizationId is required",
+        message: "organizationId or branchId is required",
       });
     }
 
@@ -28,19 +29,27 @@ export const getListStaff = async (req: Request, res: Response, next: NextFuncti
       });
     }
 
-    const whereClause: any = {
-      organization: sequelize.literal(
-        `organization @> '{"id": ${organizationId}}'`
-      ),
-    };
+    const whereClause: any = {};
+
+    if (branchId) {
+      whereClause.branches = {
+        [Op.contains]: [{ id: Number(branchId) }],
+      };
+    }
+
+    if (organizationId) {
+      whereClause.organization = organizationId;
+    }
 
     if (role && typeof role === "string") {
       whereClause.role = role as StaffRole;
     }
 
+    if (!user) whereClause.is_active = true;
+
     const staff = await OrganizationStaff.findAll({
       where: whereClause,
-      attributes: { exclude: ["password", "token"] },
+      attributes: { exclude: ["password", "token", "email"] },
     });
 
     return res.status(200).json({

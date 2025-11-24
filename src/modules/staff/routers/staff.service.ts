@@ -145,6 +145,7 @@ export default OrganizationStaffRouter;
  * /staff:
  *   get:
  *     summary: Получить список сотрудников организации. Только владелец (owner)
+ *     description: organizationId обязателен если нет branchId и наоборот.
  *     tags: [OrganizationStaff]
  *     security:
  *       - bearerAuth: []
@@ -160,6 +161,11 @@ export default OrganizationStaffRouter;
  *         schema:
  *           type: string
  *           enum: [manager, employee]
+ *       - in: query
+ *         name: branchId
+ *         required: false
+ *         schema:
+ *           type: string
  *     responses:
  *       200:
  *         description: Успешное получение списка сотрудников

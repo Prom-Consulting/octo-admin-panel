@@ -60,13 +60,6 @@ export const userLogin = async (req: Request, res: Response, next: NextFunction)
 
     res.cookie("refreshToken", refreshToken, refreshCookieOptions );
 
-    // res.cookie("refreshToken", refreshToken, {
-    //   httpOnly: true,
-    //   secure: process.env.NODE_ENV === "production",
-    //   sameSite: "strict",
-    //   maxAge: 7 * 24 * 60 * 60 * 1000,
-    // });
-
     return res.status(200).json({
       success: true,
       message: "Success",

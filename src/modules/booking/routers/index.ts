@@ -3,6 +3,7 @@ import AssignmentsBookingServiceRoute from "./assigments.service.ts";
 import BookingOrganizationRoute from "./organization.service.ts";
 import BookingBranchRoute from "./branch.service.ts";
 import { getGuestToken } from "../controllers/auth.service.ts";
+import BookingStaffRoute from "./staf.service.ts";
 
 const BookingRoute = Router();
 
@@ -10,24 +11,25 @@ BookingRoute.use("/organizations", BookingOrganizationRoute);
 BookingRoute.get("/auth/:organizationId", getGuestToken);
 BookingRoute.use("/branches", BookingBranchRoute);
 BookingRoute.use("/assignments", AssignmentsBookingServiceRoute);
+BookingRoute.use("/staff", BookingStaffRoute);
 
 /**
  * @openapi
  * tags:
- *   - name: Booking Auth
- *     description: Для гостевого захода
+ *   - name: Booking staff and auth
+ *     description:
  */
 
 /**
  * @openapi
  * /booking/auth/{organizationId}:
  *   get:
- *     summary: Get guest token for booking
+ *     summary: Получение гостевого токена
  *     description:
  *       Генерирует одноразовый токен для гостей (без авторизации).
  *       Токен используется для доступа к тенантной базы данных
  *     tags:
- *       - Booking Auth
+ *       - Booking staff and auth
  *     parameters:
  *       - in: path
  *         name: organizationId

@@ -58,8 +58,9 @@ export default  AssignmentsServiceRoute;
  * @swagger
  * /assignments:
  *   get:
- *     summary: Получить список назначений. Сотрудник может только свои
- *     description: Возвращает список назначений (записей клиентов) для выбранного филиала. Можно фильтровать по дате, сотруднику и клиенту. Сотрудник может получить лишь свои записи
+ *     summary: Получить список назначений. Сотрудник может только
+ *     description: Возвращает список назначений (записей клиентов) для выбранного филиала.
+ *       Можно фильтровать по дате, сотруднику и клиенту. Сотрудник может получить лишь свои записи.
  *     tags: [Assignments]
  *     parameters:
  *       - in: query
@@ -85,15 +86,45 @@ export default  AssignmentsServiceRoute;
  *         schema:
  *           type: integer
  *         description: ID клиента (для фильтрации)
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Номер страницы (пагинация)
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *         description: Количество элементов на странице (пагинация)
  *     responses:
  *       200:
- *         description: Успешно. Возвращает список назначений.
+ *         description: Успешно. Возвращает список назначений с пагинацией.
  *         content:
  *           application/json:
  *             schema:
- *               type: array
- *               items:
- *                 $ref: '#/components/schemas/Assignment'
+ *               type: object
+ *               properties:
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     page:
+ *                       type: integer
+ *                       example: 1
+ *                     limit:
+ *                       type: integer
+ *                       example: 20
+ *                     total:
+ *                       type: integer
+ *                       example: 42
+ *                     pages:
+ *                       type: integer
+ *                       example: 3
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Assignment'
  *       400:
  *         description: Некорректный запрос — не указан branchId или филиал не найден.
  *         content:
