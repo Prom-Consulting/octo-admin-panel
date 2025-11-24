@@ -33,6 +33,11 @@ export default OrganizationServiceRoute;
  *         schema:
  *           type: integer
  *         description: ID владельца организации
+ *       - in: query
+ *         name: name
+ *         schema:
+ *           type: string
+ *         description: Поиск организаций по частичному совпадению имени
  *     responses:
  *       200:
  *         description: Список организаций
@@ -43,44 +48,6 @@ export default OrganizationServiceRoute;
  *               items:
  *                 $ref: '#/components/schemas/Organization'
  *
- *   post:
- *     summary: Создать новую организацию
- *     tags: [Organizations]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - name
- *               - branches
- *               - paidDate
- *               - userId
- *             properties:
- *               name:
- *                 type: string
- *               branches:
- *                 type: integer
- *               paidDate:
- *                 type: string
- *                 format: date
- *               userId:
- *                 type: integer
- *     responses:
- *       201:
- *         description: Организация успешно создана
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 newOrganization:
- *                   $ref: '#/components/schemas/Organization'
- *       400:
- *         description: Ошибка валидации
- *       500:
- *         description: Проблема с базой данных
  */
 
 /**
