@@ -12,6 +12,7 @@ import { normalizePhone } from "../../../utils /phone/normalizePhone.ts";
 import axios from "axios";
 import { whatsappSendApi } from "../../../constants/urls.ts";
 import { generate6DigitCode } from "../../../utils /phone/sanitizePhone.ts";
+import jwt from "jsonwebtoken";
 
 interface OTPEntry {
   phone: string;
@@ -138,6 +139,18 @@ export const refreshClientToken = async (req: Request, res: Response, next: Next
 
   } catch (e) {
     console.error({ error: "Invalid refresh token client" }, e);
+    if (e instanceof jwt.JsonWebTokenError) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid token",
+      });
+    }
+    if (e instanceof jwt.TokenExpiredError) {
+      return res.status(401).json({
+        success: false,
+        message: "Token expired",
+      });
+    }
     next(e);
   }
 };

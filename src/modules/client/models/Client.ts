@@ -77,6 +77,7 @@ export const generateAccessToken = (client: ClientAttributes) => {
   return jwt.sign({
     id: client.id,
     first_name: client.first_name,
+    last_name: client.last_name || null,
     phone_number: client.phone_number,
     role: "client",
   }, ACCESS_SECRET, { expiresIn: "3d", header: { kid: "client", alg: "HS256" } });

@@ -5,6 +5,7 @@ import User from "../modules/user/models/User.ts";
 import { envConfig } from "../../config/envConfig.ts";
 import type { BranchAttributes } from "../modules/organization/models/Branch.ts";
 import type { OrganizationAttributes } from "../modules/organization/models/Organization.ts";
+import type { ClientAuth } from "../types";
 
 export const JWT_SECRET = envConfig.JWT_SECRET || "default_fallback_secret";
 export const JWT_REFRESH_SECRET = envConfig.JWT_REFRESH_SECRET || "default_fallback_secret";
@@ -24,6 +25,7 @@ declare global {
       };
       branch?: BranchAttributes;
       organization?: OrganizationAttributes;
+      client?: ClientAuth,
     }
   }
 }

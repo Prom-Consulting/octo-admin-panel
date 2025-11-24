@@ -8,7 +8,7 @@ export const findOrCreateClient = async (
   clientData: any,
   organization: any,
   user: any,
-  token?: string,
+  token?: string | null,
 ): Promise<any> => {
   const where: WhereOptions<ClientAttributes> = clientData.id
     ? { id: clientData.id }
@@ -40,7 +40,7 @@ export const findOrCreateClient = async (
       },
     });
 
-    return { clientDb:response.data || null, finalToken: finalToken, isOrgPerson }
+    return { clientDb:response.data || null, token: finalToken, isOrgPerson }
 
   } catch (error) {
     if (axios.isAxiosError(error)) {

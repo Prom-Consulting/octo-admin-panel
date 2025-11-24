@@ -90,6 +90,19 @@ export const adminTokenRefresh = async (req: Request, res: Response, next: NextF
     });
 
   } catch (e) {
+    console.error("Login error:", e);
+    if (e instanceof jwt.JsonWebTokenError) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid token",
+      });
+    }
+    if (e instanceof jwt.TokenExpiredError) {
+      return res.status(401).json({
+        success: false,
+        message: "Token expired",
+      });
+    }
     next(e);
   }
 }
@@ -124,6 +137,7 @@ export const adminLogout = async (req: Request, res: Response, next: NextFunctio
       message: "Logout successful",
     });
   } catch (e) {
+    console.error("Logout error:", e);
     next(e);
   }
 }
