@@ -62,7 +62,9 @@ app.use((req, res) => {
 });
 
 const run = async () => {
+  console.log("run start");
   await dbConnection();
+  console.log("db connection");
 
   app.listen(PORT, () => {
     console.log(`🚀 Server running on http://localhost:${PORT}`);
