@@ -104,19 +104,23 @@ export const createOrganization = async (req: Request, res: Response, next: Next
       isActive: true,
     };
 
-    const result = await createClientDatabase(organization);
+    const newOrganization = await Organization.create(organization);
 
-    if (result === 0) {
-      const newOrganization = await Organization.create(organization);
+    return res.send(newOrganization);
 
-      return res.status(201).json({
-        newOrganization,
-      });
-    } else {
-      return res.status(500).send({
-        error: "Database issue",
-      });
-    }
+    // const result = await createClientDatabase(organization);
+    //
+    // if (result === 0) {
+    //   const newOrganization = await Organization.create(organization);
+    //
+    //   return res.status(201).json({
+    //     newOrganization,
+    //   });
+    // } else {
+    //   return res.status(500).send({
+    //     error: "Database issue",
+    //   });
+    // }
   } catch (e) {
     console.log("Create organization error",e);
     next(e);

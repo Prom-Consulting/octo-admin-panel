@@ -3,7 +3,7 @@ import { adminLogin, adminLogout, adminTokenRefresh } from "../controllers/auth.
 
 const AuthorizationAdminService = Router();
 
-AuthorizationAdminService.post("/login", adminLogin);
+AuthorizationAdminService.post("/", adminLogin);
 AuthorizationAdminService.post("/refresh", adminTokenRefresh);
 AuthorizationAdminService.delete("/logout", adminLogout);
 
@@ -16,7 +16,7 @@ AuthorizationAdminService.delete("/logout", adminLogout);
 
 /**
  * @openapi
- * /admin/login:
+ * /admin/:
  *   post:
  *     summary: Авторизация администратора
  *     description: >
