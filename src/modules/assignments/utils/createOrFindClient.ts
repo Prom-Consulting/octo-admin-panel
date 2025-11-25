@@ -1,15 +1,14 @@
 import type { WhereOptions } from "sequelize";
 import { Client, type ClientAttributes } from "../../client/models/Client";
-import jwt from "jsonwebtoken";
-import { envConfig } from "../../../../config/envConfig.ts";
 import { octoApi } from "../../../constants/urls.ts";
 import axios from "axios";
+import { generateBookingToken } from "../../booking/utils/generateToken.ts";
 
 export const findOrCreateClient = async (
   clientData: any,
   organization: any,
   user: any,
-  token?: string,
+  token?: string | null,
 ): Promise<any> => {
   const where: WhereOptions<ClientAttributes> = clientData.id
     ? { id: clientData.id }
@@ -25,14 +24,7 @@ export const findOrCreateClient = async (
 
   let finalToken = token;
   if (!finalToken) {
-    finalToken = jwt.sign(
-      {
-        organization_name: organization.name,
-        organization_id: organization.id,
-      },
-      envConfig.ONE_TIME_JWT_SECRET,
-      { expiresIn: "15m", header: { kid: "orgClient", alg: "HS256" } }
-    );
+    finalToken = generateBookingToken(organization.name, organization.id);
   }
 
   try {
@@ -48,7 +40,7 @@ export const findOrCreateClient = async (
       },
     });
 
-    return { clientDb:response.data || null, finalToken: finalToken, isOrgPerson }
+    return { clientDb:response.data || null, token: finalToken, isOrgPerson }
 
   } catch (error) {
     if (axios.isAxiosError(error)) {

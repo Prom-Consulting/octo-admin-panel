@@ -6,6 +6,7 @@ import AdminModel from "../models/AdminModel.ts";
 import bcrypt from "bcrypt";
 import AdminBranchesService from "./branshes.service.ts";
 import AdminUsersService from "./users.service.ts";
+import AdminClientRouter from "./client.service.ts";
 
 const AdminServiceRoute = Router();
 
@@ -52,5 +53,6 @@ AdminServiceRoute.use(authAdminMiddleware);
 AdminServiceRoute.use("/organizations", AdminOrganizations);
 AdminServiceRoute.use("/branches", AdminBranchesService);
 AdminServiceRoute.use("/user", AdminUsersService);
+AdminServiceRoute.use("/clients", AdminClientRouter);
 
 export default AdminServiceRoute;

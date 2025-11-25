@@ -10,7 +10,7 @@ import getDayRange from "../../../utils /getDayRange.ts";
 import OrganizationStaff from "../../staff/models/OrganizationStaff.ts";
 import transformPrices from "../../../utils /transformPrices.ts";
 import { DateTime } from "luxon";
-import { checkTimeOverlap } from "../checkTimeOverlap.ts";
+import { checkTimeOverlap } from "../utils/checkTimeOverlap.ts";
 import type { ServiceInfo } from "../../../types";
 import User from "../../user/models/User.ts";
 import axios from "axios";
@@ -18,6 +18,7 @@ import { octoApi } from "../../../constants/urls.ts";
 import { getBranchAndOrganization } from "../../../utils /getBranchAndOrganization.ts";
 import { clientActivityEvents } from "../../../events/clients/clientActivityEvents.ts";
 import { findOrCreateClient } from "../utils/createOrFindClient.ts";
+import { generateBookingToken } from "../../booking/utils/generateToken.ts";
 
 export const getListAssignments = async (
   req: Request,
@@ -27,6 +28,7 @@ export const getListAssignments = async (
   try {
     const { employeeId, clientId, date } = req.query;
     const user = req.user;
+    const client = req.client;
     const where: WhereOptions<Assignment> = {};
 
     const { branch } = await getBranchAndOrganization(req, { branch: true });
@@ -37,17 +39,44 @@ export const getListAssignments = async (
       if (employeeId) where.employee_id = Number(employeeId);
     }
 
-    if (clientId) where.client_id = Number(clientId);
+    if (client) {
+      where.client_id = client.id;
+    } else {
+      if (clientId) where.client_id = Number(clientId);
+    }
+
     if (branch) where.branch_id = branch.id;
 
     if (date) {
       const tz = branch.timezone || "UTC";
-      const { startOfDay, endOfDay } = getDayRange(date as string, date as string, tz);
+      const { startOfDay, endOfDay } = getDayRange(
+        date as string,
+        date as string,
+        tz
+      );
       where.assignment_date = { [Op.between]: [startOfDay, endOfDay] };
     }
 
-    const assignments = await Assignment.findAll({ where });
-    res.send(assignments);
+    const page = Math.max(Number(req.query.page) || 1, 1);
+    const limit = Math.max(Number(req.query.limit) || 20, 1);
+    const offset = (page - 1) * limit;
+
+    const { rows: assignments, count } = await Assignment.findAndCountAll({
+      where,
+      limit,
+      offset,
+      order: [["createdAt", "ASC"]],
+    });
+
+    res.send({
+      pagination: {
+        page,
+        limit,
+        total: count,
+        pages: Math.ceil(count / limit),
+      },
+      data: assignments,
+    });
   } catch (e) {
     console.log("Error get list assignment", e);
     next(e);
@@ -62,12 +91,15 @@ export const getAssignmentById = async (
   try {
     const { id } = req.params;
     const { branch } = await getBranchAndOrganization(req, { branch: true });
-    const assignment = await Assignment.findOne({
-      where: { id, branch_id: Number(branch.id) }
-    });
+    const where: WhereOptions<AssignmentAttributes> = {id, branch_id: Number(branch.id)};
+    const client = req.client;
+
+    if (client) where.client_id = client.id;
+
+    const assignment = await Assignment.findOne({ where });
 
     if (!assignment) {
-      return res.status(404).send({ error: "No Assignment found with this id" });
+      return res.status(404).send({ error: "No Assignment found with this id or this assignment is not related to you in any way" });
     }
 
     res.send(assignment);
@@ -86,7 +118,6 @@ export const createAssignment = async (
     const {
       organizationId,
       branchId,
-      client,
       employeeId,
       service,
       additionalServices,
@@ -98,6 +129,13 @@ export const createAssignment = async (
     } = req.body;
 
     const user = req.user;
+    const token = req.headers.authorization?.split(" ")[1] || null;
+
+    let client;
+    let finalToken = token;
+    let isOrganizationPerson = false;
+
+    if (user) isOrganizationPerson = true;
 
     if (!organizationId || !branchId || !assignmentDate || !startTime) {
       return res.status(400).json({
@@ -105,23 +143,43 @@ export const createAssignment = async (
       });
     }
 
-    const token = req.headers.authorization?.split(" ")[1] || null;
+    const { branch, organization } = await getBranchAndOrganization(req, {
+      required: true
+    });
 
-    if (!client?.firstname || !client?.phoneNumber) {
-      return res.status(400).json({
-        error: "client firstname & phone required"
-      });
+    client = req.client;
+    if (!client) {
+      client = req.body.client;
+      if (!client?.firstname || !client?.phoneNumber) {
+        return res.status(400).json({
+          error: "client firstname & phone required"
+        });
+      }
+      const result = await findOrCreateClient(client, organization, user, token);
+
+      if (!result || !result.clientDb) {
+        return res.status(400).json({
+          error: "Failed to find or create client"
+        });
+      }
+
+      finalToken = result.token;
+      isOrganizationPerson = result.isOrgPerson;
+      client = result.clientDb;
+      if (!result.clientDb) {
+        return res.status(400).json({
+          error: "Failed to find or create client"
+        });
+      }
     }
+
+    if (req.client) finalToken = generateBookingToken(organization.name, organization.id);
 
     if (!service?.id || !service?.duration) {
       return res.status(400).json({
         error: "service with id and duration is required"
       });
     }
-
-    const { branch, organization } = await getBranchAndOrganization(req, {
-      required: true
-    });
 
     let targetEmployeeId: number;
     if (user?.role === "employee") {
@@ -149,41 +207,20 @@ export const createAssignment = async (
       return res.status(404).json({ error: "Employee not found" });
     }
 
-    const result = await findOrCreateClient(client, organization, user, token);
-
-    if (!result || !result.clientDb) {
-      return res.status(400).json({
-        error: "Failed to find or create client"
-      });
-    }
-
-    const { clientDb, finalToken, isOrgPerson } = result;
-
-    if (!clientDb) {
-      return res.status(400).json({
-        error: "Failed to find or create client"
-      });
-    }
-
     const normalizePrice = (s: ServiceInfo) => ({
       ...s,
       price: transformPrices(s.price),
     });
 
-    const normalizedService = normalizePrice(service);
-    const normalizedAdditional = Array.isArray(additionalServices)
-      ? additionalServices.map(normalizePrice)
-      : [];
-
     const totalPrice =
-      normalizedService.price +
-      normalizedAdditional.reduce((sum: number, s: ServiceInfo) =>
+      service.price +
+      additionalServices.reduce((sum: number, s: ServiceInfo) =>
         sum + s.price, 0
       );
 
     const totalDuration =
       service.duration +
-      normalizedAdditional.reduce((sum: number, s: ServiceInfo) =>
+      additionalServices.reduce((sum: number, s: ServiceInfo) =>
         sum + s.duration, 0
       );
 
@@ -236,11 +273,11 @@ export const createAssignment = async (
       assignment_date: assignmentDateUTC,
       start_time: startTimeUTC,
       end_time: endTimeUTC,
-      client_id: clientDb.id,
+      client_id: client.id,
       client_snapshot: {
-        first_name: clientDb.first_name,
-        last_name: clientDb.last_name || null,
-        phone_number: clientDb.phone_number.replace(/\D+/g, ""),
+        first_name: client.first_name,
+        last_name: client.last_name || null,
+        phone_number: client.phone_number.replace(/\D+/g, ""),
       },
       employee_id: employee.id,
       employee_snapshot: {
@@ -248,15 +285,15 @@ export const createAssignment = async (
         last_name: employee.last_name || null,
         role: employee.role,
       },
-      service_id: normalizedService.id!,
+      service_id: service.id!,
       service_snapshot: {
-        name: normalizedService.name,
-        price: normalizedService.price,
-        duration: normalizedService.duration,
+        name: service.name,
+        price: service.price,
+        duration: service.duration,
       },
       additional_services:
-        normalizedAdditional.length > 0
-          ? normalizedAdditional.map((s: ServiceInfo) => ({
+        additionalServices.length > 0
+          ? additionalServices.map((s: ServiceInfo) => ({
             id: s.id,
             name: s.name,
             price: s.price,
@@ -277,7 +314,7 @@ export const createAssignment = async (
     clientActivityEvents.emitAssignmentCreated({
       assignment: newAssignment,
       token: finalToken,
-      organizationPerson: isOrgPerson,
+      organizationPerson: isOrganizationPerson,
     });
 
     return res.status(201).json({
@@ -612,6 +649,7 @@ export const editAssignmentBasic = async (
     const user = req.user!;
     const assignment = await Assignment.findByPk(id);
     const token = req.headers.authorization!.split(" ")[1]!;
+    const client = req.client;
 
     if (!assignment) {
       return res.status(404).json({ error: "Assignment not found" });
@@ -619,6 +657,10 @@ export const editAssignmentBasic = async (
 
     if (user.role === "employee" && assignment.employee_id !== user.id) {
       return res.status(403).json({ error: "Access denied. You can edit only your assignments." });
+    }
+
+    if (client && client.id !== assignment.client_id) {
+      return res.status(400).json({ error: "You cannot view someone else's entry. You cannot change someone else's entry." });
     }
 
     const {

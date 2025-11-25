@@ -5,9 +5,9 @@ import {
   getBranchById,
   getBranches, getBranchWithOrganization,
   updateBranch,
-} from "../controllers/branch.controllers.ts";
-import { authenticateToken, authorizeRoles } from "../../../middleware/authUserMiddleware.ts";
-import { checkBranchMiddleware, checkOrganizationMiddleware } from "../../../middleware/checkOrganizationMiddleware.ts";
+} from "../../controllers/branch.controllers.ts";
+import { authenticateToken, authorizeRoles } from "../../../../middleware/authUserMiddleware.ts";
+import { checkBranchMiddleware, checkOrganizationMiddleware } from "../../../../middleware/checkOrganizationMiddleware.ts";
 
 const BranchServiceRoute = express.Router();
 
@@ -66,7 +66,12 @@ export default BranchServiceRoute;
  *         name: organizationId
  *         schema:
  *           type: integer
- *         description: ID организации (для фильтрации, обязательно для admin)
+ *         description: ID организации (для фильтрации, обязательно для owner)
+ *       - in: query
+ *         name: name
+ *         schema:
+ *           type: string
+ *         description: Поиск филиалов по частичному совпадению имени
  *     responses:
  *       200:
  *         description: Список филиалов успешно получен

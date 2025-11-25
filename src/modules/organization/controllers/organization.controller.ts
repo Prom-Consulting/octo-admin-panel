@@ -1,5 +1,5 @@
 import type { NextFunction, Request, Response } from "express";
-import type { WhereOptions } from "sequelize";
+import { Op, type WhereOptions } from "sequelize";
 import Organization from "../models/Organization.ts";
 import User from "../../user/models/User.ts";
 import { createClientDatabase } from "../../../methods/octo_database.ts";
@@ -11,21 +11,22 @@ export const getListOrganizations = async (
   next: NextFunction
 ) => {
   try {
-    const { ownerId } = req.query;
+    const { ownerId, name } = req.query;
     const user = req.user;
     const where: WhereOptions = {};
 
-    if (!user) return res.status(401).json({ error: "Not authorized" });
 
-    if (user.role === "admin") {
+    if (user && user.role === "admin") {
       if (ownerId) where.user_id = Number(ownerId);
 
-    } else if (user.role === "owner") {
+    } else if (user && user.role === "owner") {
       where.user_id = user.id;
 
     } else {
       where.isActive = true;
     }
+
+    if (name) where.name = { [Op.iLike]: `%${name}%` };
 
     const organizationList = await Organization.findAll({ where });
     return res.send(organizationList);
@@ -45,18 +46,16 @@ export const getOrganizationByID = async (
     const { organizationId } = req.params;
     const user = req.user;
 
-    if (!user) return res.status(401).json({ error: "Not authorized" });
-
     const organization = await Organization.findByPk(organizationId);
     if (!organization) {
       return res.status(404).send({ error: "Organization not found" });
     }
 
-    if (user.role === "admin") {
+    if (user && user.role === "admin") {
       return res.send(organization);
     }
 
-    if (user.role === "owner") {
+    if (user && user.role === "owner") {
       if (organization.user_id !== user.id) {
         return res.status(403).send({ error: "Access denied" });
       }

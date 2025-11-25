@@ -3,6 +3,7 @@ import { sequelize } from "../../../dbConfig/dbConfig.ts";
 import { nanoid } from "nanoid";
 import { envConfig } from "../../../../config/envConfig.ts";
 import jwt from "jsonwebtoken";
+import bcrypt from "bcrypt";
 
 export interface ClientAttributes {
   id: string; // telegram_id создан через календарь/месенджер или сам через онлайн запись на сайте. 	manual/calendar/phone
@@ -73,12 +74,20 @@ Client.init(
 
 export const generateClientId = (source: string) => `${source}_${Date.now()}_${nanoid(16)}`;
 
+export const hashClientPassword = (password: string) => bcrypt.hash(password, 10);
+
+export const clientPasswordVerification= (password: string, passwordDb: string) => {
+  return bcrypt.compare(password, passwordDb);
+}
+
 export const generateAccessToken = (client: ClientAttributes) => {
+  if (!client.is_active) return null;
+
   return jwt.sign({
     id: client.id,
     first_name: client.first_name,
+    last_name: client.last_name || null,
     phone_number: client.phone_number,
-    role: "client",
   }, ACCESS_SECRET, { expiresIn: "3d", header: { kid: "client", alg: "HS256" } });
 };
 

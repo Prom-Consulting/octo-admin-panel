@@ -45,6 +45,11 @@ export interface ClientInfo {
   phone_number: string;
 }
 
+export interface ClientAuth extends ClientInfo {
+  id: string;
+  role: string;
+}
+
 export interface OrganizationInfo {
   id: number;
   name: string;

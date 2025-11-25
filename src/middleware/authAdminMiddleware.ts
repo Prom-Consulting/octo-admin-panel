@@ -1,29 +1,7 @@
 import jwt from "jsonwebtoken";
 import type { Request, Response, NextFunction } from "express";
-import { envConfig } from "../../config/envConfig.ts";
 import { JWT_SECRET } from "./authUserMiddleware.ts";
 import AdminModel from "../modules/admin/models/AdminModel.ts";
-
-export const authMiddleware = (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const authHeader = req.headers["authorization"];
-    if (!authHeader) {
-      return res.status(401).json({ message: "Authorization header missing" });
-    }
-
-    const token = authHeader.split(" ")[1];
-    if (!token) {
-      return res.status(401).json({ message: "Token missing" });
-    }
-
-    const secret = envConfig.JWT_SECRET!;
-    const decoded = jwt.verify(token, secret);
-    (req as any).user = decoded; // прикрепляем юзера к req
-    next();
-  } catch (err) {
-    return res.status(401).json({ message: "Invalid or expired token" });
-  }
-};
 
 export const authAdminMiddleware = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -69,6 +47,18 @@ export const authAdminMiddleware = async (req: Request, res: Response, next: Nex
 
     return next();
   } catch (err) {
-    return res.status(401).json({ message: "Invalid or expired token" });
+    if (err instanceof jwt.JsonWebTokenError) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid token",
+      });
+    }
+    if (err instanceof jwt.TokenExpiredError) {
+      return res.status(401).json({
+        success: false,
+        message: "Token expired",
+      });
+    }
+    return res.status(401).json({ message: "Invalid or expired token", err });
   }
 };

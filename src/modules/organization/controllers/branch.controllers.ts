@@ -1,27 +1,27 @@
 import type { NextFunction, Request, Response } from "express";
-import type { WhereOptions } from "sequelize";
+import { Op, type WhereOptions } from "sequelize";
 import Branch from "../models/Branch.ts";
 import Organization from "../models/Organization.ts";
 import { getBranchAndOrganization } from "../../../utils /getBranchAndOrganization.ts";
 
 export const getBranches = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { organizationId } = req.query;
+    const { organizationId, name } = req.query;
     const user = req.user;
     const where: WhereOptions = {};
 
-    if (!user) return res.status(401).json({ error: "Not authorized" });
-
-    if (user.role === "admin" || user.role === "owner") {
+    if (user && (user.role === "admin" || user.role === "owner")) {
       if (organizationId) where.organization_id = Number(organizationId);
 
-    } else if (user.role === "manager" || user.role === "employee") {
+    } else if (user && (user.role === "manager" || user.role === "employee")) {
       const branchIds = user.branches?.map((b: any) => b.id);
       if (!branchIds?.length) return res.status(200).send([]);
       where.id = branchIds;
     } else {
       where.isActive = true;
     }
+
+    if (name) where.name = { [Op.iLike]: `%${name}%` };
 
     const listBranches = await Branch.findAll({ where });
     return res.send(listBranches);
@@ -37,14 +37,13 @@ export const getBranchById = async (req: Request, res: Response, next: NextFunct
     const user = req.user;
     const { branch } = await getBranchAndOrganization(req, { branch: true });
 
-    if (!user) return res.status(401).json({ error: "Not authorized" });
     if (!branch) return res.status(404).send({ error: "Branch not found" });
 
-    if (user.role === "admin") {
+    if (user && user.role === "admin") {
       return res.send(branch);
     }
 
-    if (user.role === "owner") {
+    if (user && user.role === "owner") {
       const organization = await Organization.findByPk(branch.organization_id);
       if (!organization || organization.user_id !== user.id) {
         return res.status(403).send({ error: "Access denied" });
