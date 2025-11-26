@@ -6,7 +6,6 @@ const OrganizationIndexRouter = express.Router();
 
 OrganizationIndexRouter.use(authenticateToken);
 
-OrganizationIndexRouter.use("/", OrganizationClientRouter);
 OrganizationIndexRouter.use("/clients", OrganizationClientRouter);
 
 export default OrganizationIndexRouter;

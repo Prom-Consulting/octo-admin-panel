@@ -4,6 +4,7 @@ import BookingOrganizationRoute from "./organization.service.ts";
 import BookingBranchRoute from "./branch.service.ts";
 import { getGuestToken } from "../controllers/auth.service.ts";
 import BookingStaffRoute from "./staf.service.ts";
+import BookingWorkingDatesService from "./workingDates.service.ts";
 
 const BookingRoute = Router();
 
@@ -12,6 +13,7 @@ BookingRoute.get("/auth/:organizationId", getGuestToken);
 BookingRoute.use("/branches", BookingBranchRoute);
 BookingRoute.use("/assignments", AssignmentsBookingServiceRoute);
 BookingRoute.use("/staff", BookingStaffRoute);
+BookingRoute.use("/working-dates", BookingWorkingDatesService);
 
 /**
  * @openapi
