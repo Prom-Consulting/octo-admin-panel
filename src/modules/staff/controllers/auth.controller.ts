@@ -141,7 +141,7 @@ export const staffRefreshToken = async (req: Request, res: Response, next: NextF
       success: true,
       message: "Token refreshed successfully",
       data: {
-        accessToken: newAccessToken,
+        token: newAccessToken,
       },
     });
   } catch (e) {

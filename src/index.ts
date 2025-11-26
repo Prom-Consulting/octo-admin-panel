@@ -37,6 +37,7 @@ app.use(
 );
 app.use(express.json());
 void setupClientActivityListeners();
+
 app.use("/user", UserServiceRoute);
 app.use("/branches", BranchServiceRoute);
 app.use("/clients", ClientIndexRouter);
