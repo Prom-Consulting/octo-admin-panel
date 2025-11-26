@@ -38,7 +38,9 @@ export const getListStaff = async (req: Request, res: Response, next: NextFuncti
     }
 
     if (organizationId) {
-      whereClause.organization = Number(organizationId);
+      whereClause[Op.and] = [
+        sequelize.literal(`(organization->>'id')::int = ${Number(organizationId)}`)
+      ];
     }
 
     if (role && typeof role === "string") {
@@ -97,7 +99,7 @@ export const getStaffByBranch = async (req: Request, res: Response, next: NextFu
     const whereClause: any = {
       [Op.and]: [
         sequelize.literal(`branches @> '[{"id": ${branchId}}]'`),
-        sequelize.literal(`organization = ${Number(organizationId)}`),
+        sequelize.literal(`(organization->>'id')::int = ${Number(organizationId)}`)
       ],
     };
 
@@ -105,7 +107,6 @@ export const getStaffByBranch = async (req: Request, res: Response, next: NextFu
       whereClause.role = role as StaffRole;
     }
 
-    // --- PAGINATION ---
     const page = Math.max(Number(req.query.page) || 1, 1);
     const limit = Math.max(Number(req.query.limit) || 20, 1);
     const offset = (page - 1) * limit;
