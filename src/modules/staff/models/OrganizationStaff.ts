@@ -8,7 +8,6 @@ export interface BranchInfo {
   id: number;
   name: string;
   address: string;
-  // добавьте другие нужные поля филиала
 }
 
 export interface OrganizationStaffAttributes {
@@ -45,7 +44,7 @@ export type OrganizationStaffCreationAttributes = Optional<
   | "createdAt"
   | "updatedAt"
   | "email"
-  | "branches" // можно создать без филиалов
+  | "branches"
 >;
 
 export class OrganizationStaff
@@ -82,7 +81,7 @@ OrganizationStaff.init(
     branches: {
       type: DataTypes.JSONB,
       allowNull: false,
-      defaultValue: [], // по умолчанию пустой массив
+      defaultValue: [],
     },
     first_name: { type: DataTypes.TEXT, allowNull: false },
     last_name: { type: DataTypes.TEXT, allowNull: false },

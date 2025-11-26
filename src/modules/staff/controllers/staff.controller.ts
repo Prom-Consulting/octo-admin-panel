@@ -38,7 +38,7 @@ export const getListStaff = async (req: Request, res: Response, next: NextFuncti
     }
 
     if (organizationId) {
-      whereClause.organization = organizationId;
+      whereClause.organization = Number(organizationId);
     }
 
     if (role && typeof role === "string") {
@@ -47,18 +47,30 @@ export const getListStaff = async (req: Request, res: Response, next: NextFuncti
 
     if (!user) whereClause.is_active = true;
 
-    const staff = await OrganizationStaff.findAll({
+    const page = Math.max(Number(req.query.page) || 1, 1);
+    const limit = Math.max(Number(req.query.limit) || 20, 1);
+    const offset = (page - 1) * limit;
+
+    const { rows: staff, count } = await OrganizationStaff.findAndCountAll({
       where: whereClause,
       attributes: { exclude: ["password", "token", "email"] },
+      limit,
+      offset,
+      order: [["createdAt", "ASC"]],
     });
 
     return res.status(200).json({
       success: true,
+      pagination: {
+        page,
+        limit,
+        total: count,
+        pages: Math.ceil(count / limit),
+      },
       data: staff,
-      count: staff.length,
     });
   } catch (e) {
-    console.error("Error in getStaff:", e);
+    console.error("Error in getListStaff:", e);
     next(e);
   }
 };
@@ -85,7 +97,7 @@ export const getStaffByBranch = async (req: Request, res: Response, next: NextFu
     const whereClause: any = {
       [Op.and]: [
         sequelize.literal(`branches @> '[{"id": ${branchId}}]'`),
-        sequelize.literal(`organization @> '{"id": ${organizationId}}'`),
+        sequelize.literal(`organization = ${Number(organizationId)}`),
       ],
     };
 
@@ -93,15 +105,28 @@ export const getStaffByBranch = async (req: Request, res: Response, next: NextFu
       whereClause.role = role as StaffRole;
     }
 
-    const staff = await OrganizationStaff.findAll({
+    // --- PAGINATION ---
+    const page = Math.max(Number(req.query.page) || 1, 1);
+    const limit = Math.max(Number(req.query.limit) || 20, 1);
+    const offset = (page - 1) * limit;
+
+    const { rows: staff, count } = await OrganizationStaff.findAndCountAll({
       where: whereClause,
       attributes: { exclude: ["password", "token"] },
+      limit,
+      offset,
+      order: [["createdAt", "ASC"]],
     });
 
     return res.status(200).json({
       success: true,
+      pagination: {
+        page,
+        limit,
+        total: count,
+        pages: Math.ceil(count / limit),
+      },
       data: staff,
-      count: staff.length,
     });
   } catch (e) {
     console.error("Error in getStaffByBranch:", e);
@@ -122,8 +147,8 @@ export const createStaff = async (req: Request, res: Response, next: NextFunctio
     customRole,
     specialty,
     description,
+    photo,
     isActive = true,
-    photoUrl,
   } = req.body;
 
   try {
@@ -199,7 +224,7 @@ export const createStaff = async (req: Request, res: Response, next: NextFunctio
       specialty,
       description,
       is_active: isActive,
-      photo_url: photoUrl,
+      photo_url: photo,
     });
 
     const { password: _, email: __, ...staffData } = newStaff.toJSON();
@@ -218,90 +243,142 @@ export const createStaff = async (req: Request, res: Response, next: NextFunctio
 export const updateStaff = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
+
+    const staff = await OrganizationStaff.findByPk(id);
+    if (!staff) {
+      return res.status(404).json({ success: false, message: "Staff member not found" });
+    }
+
     const {
-      organization, branches, firstname, lastname, username, password, email,
-      role, customRole, specialty, description, isActive, photoUrl
+      firstname,
+      lastname,
+      username,
+      email,
+      role,
+      customRole,
+      specialty,
+      description,
+      organizationId,
+      branches,
+      password,
+      photo,
     } = req.body;
 
-    const staff = await OrganizationStaff.findByPk(id, { attributes: { exclude: [] } });
-    if (!staff) return res.status(404).json({ success: false, message: "Staff member not found" });
+    const updates: Record<string, any> = {};
 
-    const targetOrganizationId = organization?.id || staff.organization.id;
+    if (firstname !== undefined) updates.first_name = firstname;
+    if (lastname !== undefined) updates.last_name = lastname;
+    if (username !== undefined) updates.username = username;
+    if (description !== undefined) updates.description = description;
+    if (specialty !== undefined) updates.specialty = specialty;
+    if (customRole !== undefined) updates.customRole = customRole;
+    if (photo !== undefined) updates.photo_url = photo;
 
-    if (branches) {
-      const branchValidation = await validateBranches(branches, targetOrganizationId);
-      if (!branchValidation.isValid) return res.status(400).json({ success: false, message: branchValidation.message });
+    if (role !== undefined) {
+      if (!ALLOWED_ROLES.includes(role as StaffRole)) {
+        return res.status(422).json({
+          success: false,
+          message: "Invalid role. Must be 'manager' or 'employee'"
+        });
+      }
+      updates.role = role;
     }
 
-    if (role && !ALLOWED_ROLES.includes(role as StaffRole)) {
-      return res.status(422).json({ success: false, message: "Invalid role. Must be 'manager' or 'employee'" });
+    if (email !== undefined && email !== staff.email) {
+      const existing = await OrganizationStaff.findOne({
+        where: { email },
+        attributes: ["id"]
+      });
+
+      if (existing) {
+        return res.status(409).json({
+          success: false,
+          message: "User with this email already exists",
+        });
+      }
+
+      updates.email = email;
     }
 
-    if (email && email !== staff.email) {
-      const existingStaff = await OrganizationStaff.findOne({ where: { email }, attributes: ["id", "email"] });
-      if (existingStaff) return res.status(409).json({ success: false, message: "User with this email already exists" });
+    if (password !== undefined) {
+      updates.password = await bcrypt.hash(password, SALT_ROUNDS);
     }
 
-    const updateData: any = {};
-    if (organization) updateData.organization = organization;
-    if (branches) updateData.branches = (await validateBranches(branches, targetOrganizationId)).validBranches;
-    if (firstname) updateData.first_name = firstname;
-    if (lastname) updateData.last_name = lastname;
-    if (username) updateData.username = username;
-    if (email) updateData.email = email;
-    if (role) updateData.role = role;
-    if (customRole) updateData.customRole = customRole;
-    if (specialty) updateData.specialty = specialty;
-    if (description) updateData.description = description;
-    if (isActive !== undefined) updateData.is_active = isActive;
-    if (photoUrl) updateData.photo_url = photoUrl;
-    if (password) updateData.password = await bcrypt.hash(password, SALT_ROUNDS);
+    if (organizationId !== undefined) {
+      updates.organizationId = organizationId;
+    }
 
-    await staff.update(updateData);
+    if (branches !== undefined) {
+      const targetOrgId = organizationId || staff.organization?.id;
 
-    const updatedStaff = await OrganizationStaff.findByPk(id, { attributes: { exclude: ["password", "token"] } });
+      const branchValidation = await validateBranches(branches, targetOrgId);
 
-    return res.status(200).json({ success: true, message: "Staff member updated successfully", data: updatedStaff });
+      if (!branchValidation.isValid) {
+        return res.status(400).json({
+          success: false,
+          message: branchValidation.message,
+        });
+      }
+
+      updates.branches = branchValidation.validBranches;
+    }
+
+    await staff.update(updates);
+
+    const updatedStaff = await OrganizationStaff.findByPk(id, {
+      attributes: { exclude: ["password", "token"] }
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Staff member updated successfully",
+      data: updatedStaff,
+    });
+
   } catch (e) {
     console.error("Error in updateStaff:", e);
     next(e);
   }
 };
 
-export const patchStaff = async (req: Request, res: Response, next: NextFunction) => {
+export const updateMyProfile = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { id } = req.params;
-    const updates = req.body;
+    const user = req.user;
 
-    const staff = await OrganizationStaff.findByPk(id, { attributes: { exclude: [] } });
-    if (!staff) return res.status(404).json({ success: false, message: "Staff member not found" });
+    if (!user) return res.status(401).json({ error: "Not authorized" });
 
-    const targetOrganizationId = updates.organization?.id || staff.organization.id;
+    const staff = await OrganizationStaff.findByPk(user.id);
+    if (!staff) return res.status(404).send("User not found");
 
-    if (updates.branches) {
-      const branchValidation = await validateBranches(updates.branches, targetOrganizationId);
-      if (!branchValidation.isValid) return res.status(400).json({ success: false, message: branchValidation.message });
-      updates.branches = branchValidation.validBranches;
+    const {
+      firstname,
+      lastname,
+      username,
+      email,
+      password,
+      description,
+      specialty,
+      photo
+    } = req.body;
+
+    const updates: any = {};
+
+    if (firstname !== undefined) updates.first_name = firstname;
+    if (lastname !== undefined) updates.last_name = lastname;
+    if (username !== undefined) updates.username = username;
+    if (email !== undefined) updates.email = email;
+    if (description !== undefined) updates.description = description;
+    if (specialty !== undefined) updates.specialty = specialty;
+    if (photo !== undefined) updates.photo_url = photo;
+
+    if (password) {
+      updates.password = await bcrypt.hash(password, SALT_ROUNDS);
     }
-
-    if (updates.role && !ALLOWED_ROLES.includes(updates.role as StaffRole)) {
-      return res.status(422).json({ success: false, message: "Invalid role. Must be 'manager' or 'employee'" });
-    }
-
-    if (updates.email && updates.email !== staff.email) {
-      const existingStaff = await OrganizationStaff.findOne({ where: { email: updates.email }, attributes: ["id", "email"] });
-      if (existingStaff) return res.status(409).json({ success: false, message: "User with this email already exists" });
-    }
-
-    if (updates.password) updates.password = await bcrypt.hash(updates.password, SALT_ROUNDS);
 
     await staff.update(updates);
 
-    const updatedStaff = await OrganizationStaff.findByPk(id, { attributes: { exclude: ["password", "token"] } });
-
-    return res.status(200).json({ success: true, message: "Staff member updated successfully", data: updatedStaff });
+    return res.json({ success: true, data: staff });
   } catch (e) {
-    console.error("Error in patchStaff:", e);
     next(e);
   }
 };
