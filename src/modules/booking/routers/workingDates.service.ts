@@ -3,7 +3,7 @@ import { getWorkingDates } from "../../staff/controllers/workingDates.controller
 
 const BookingWorkingDatesService = express.Router();
 
-BookingWorkingDatesService.use("/", getWorkingDates);
+BookingWorkingDatesService.get("/", getWorkingDates);
 
 /**
  * @openapi
