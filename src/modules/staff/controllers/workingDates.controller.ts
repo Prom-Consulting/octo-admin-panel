@@ -29,7 +29,7 @@ export const getWorkingDates = async (req: Request, res: Response, next: NextFun
 
     if (date) {
       const tz = branch.timezone || "UTC";
-      const { startOfDay, endOfDay } = getDayRange(date, date, tz);
+      const { startOfDay, endOfDay } = getDayRange(date as string, date as string, tz);
       where.work_date = { [Op.between]: [startOfDay, endOfDay] };
     }
 

@@ -10,7 +10,7 @@ import { checkBranchMiddleware } from "../../../middleware/checkOrganizationMidd
 
 const WorkingDatesServiceRoute = express.Router();
 
-WorkingDatesServiceRoute.use(authenticateToken,);
+WorkingDatesServiceRoute.use(authenticateToken);
 
 WorkingDatesServiceRoute.get("/",
   checkBranchMiddleware,
