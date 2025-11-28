@@ -216,6 +216,7 @@ export default  AssignmentsServiceRoute;
  *       Обновляет основную информацию о назначении.
  *       Сотрудник может редактировать **только свои** назначения.
  *       Владельцы и менеджеры могут редактировать любые.
+ *       Статусы записи: "new", "scheduled", "completed", "canceled"
  *     tags: [Assignments]
  *     security:
  *       - bearerAuth: []
