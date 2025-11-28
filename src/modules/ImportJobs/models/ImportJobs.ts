@@ -1,4 +1,3 @@
-// models/ImportJob.ts
 import { DataTypes, Model, type Optional } from "sequelize";
 import { sequelize } from "../../../dbConfig/dbConfig.ts";
 
@@ -22,16 +21,16 @@ export interface ImportJobAttributes {
   branch_id: number;
   organization_id: number;
   file_name: string;
-  gcs_file_name: string;
+  file_id: string;
   status: ImportStatus;
   completed_at?: Date | null;
   error_message?: string | null;
   total_rows?: number | null;
-  processed_rows: number;
-  clients_imported: number;
-  staff_imported: number;
-  services_imported: number;
-  assignments_imported: number;
+  processed_rows: number | null;
+  clients_imported: number | null;
+  staff_imported: number | null;
+  services_imported: number | null;
+  assignments_imported: number | null;
   current_stage?: string | null;
 }
 
@@ -57,7 +56,7 @@ export class ImportJob
   declare branch_id: number;
   declare organization_id: number;
   declare file_name: string;
-  declare gcs_file_name: string;
+  declare file_id: string;
   declare status: ImportStatus;
   declare completed_at: Date | null;
   declare error_message: string | null;
@@ -77,7 +76,7 @@ ImportJob.init(
     branch_id: { type: DataTypes.INTEGER, allowNull: false, },
     organization_id: { type: DataTypes.INTEGER, allowNull: false, },
     file_name: { type: DataTypes.TEXT, allowNull: false, },
-    gcs_file_name: { type: DataTypes.TEXT, allowNull: false, },
+    file_id: { type: DataTypes.TEXT, allowNull: false, },
     status: {
       type: DataTypes.ENUM(...IMPORT_STATUSES),
       defaultValue: "PENDING",
@@ -89,27 +88,27 @@ ImportJob.init(
     processed_rows: {
       type: DataTypes.INTEGER,
       defaultValue: 0,
-      allowNull: false,
+      allowNull: true,
     },
     clients_imported: {
       type: DataTypes.INTEGER,
       defaultValue: 0,
-      allowNull: false,
+      allowNull: true,
     },
     staff_imported: {
       type: DataTypes.INTEGER,
       defaultValue: 0,
-      allowNull: false,
+      allowNull: true,
     },
     services_imported: {
       type: DataTypes.INTEGER,
       defaultValue: 0,
-      allowNull: false,
+      allowNull: true,
     },
     assignments_imported: {
       type: DataTypes.INTEGER,
       defaultValue: 0,
-      allowNull: false,
+      allowNull: true,
     },
     current_stage: { type: DataTypes.STRING, allowNull: true, },
   },
