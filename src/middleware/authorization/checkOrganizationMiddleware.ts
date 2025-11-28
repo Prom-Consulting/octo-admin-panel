@@ -1,6 +1,6 @@
 import type { NextFunction, Request, Response } from "express";
-import Organization from "../modules/organization/models/Organization.ts";
-import Branch from "../modules/organization/models/Branch.ts";
+import Organization from "../../modules/organization/models/Organization.ts";
+import Branch from "../../modules/organization/models/Branch.ts";
 
 export const checkOrganizationMiddleware = async (
   req: Request,

@@ -1,5 +1,5 @@
 import express from "express";
-import { authAdminMiddleware } from "../../../middleware/authAdminMiddleware.ts";
+import { authAdminMiddleware } from "../../../middleware/authorization/authAdminMiddleware.ts";
 import {
   createOrganization, editOrganization,
   getListOrganizations,

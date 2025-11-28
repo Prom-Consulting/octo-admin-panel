@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { authenticateToken } from "../../../middleware/authUserMiddleware.ts";
+import { authenticateToken } from "../../../middleware/authorization/authUserMiddleware.ts";
 import { staffLogout, staffLogin, staffRefreshToken, staffMe, staffChange } from "../controllers/auth.controller.ts";
 
 const OrganizationStaffAuthorizationRouter = Router();

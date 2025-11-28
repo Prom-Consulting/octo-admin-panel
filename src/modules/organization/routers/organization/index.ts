@@ -1,6 +1,6 @@
 import express from "express";
 import OrganizationClientRouter from "./client.service.ts";
-import { authenticateToken } from "../../../../middleware/authUserMiddleware.ts";
+import { authenticateToken } from "../../../../middleware/authorization/authUserMiddleware.ts";
 
 const OrganizationIndexRouter = express.Router();
 

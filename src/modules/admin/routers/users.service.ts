@@ -1,7 +1,7 @@
 import express from "express";
 import { changeUserData, createUser, deleteUser, getUserList } from "../../user/controller/user.controller.ts";
-import { authAdminMiddleware } from "../../../middleware/authAdminMiddleware.ts";
-import { authorizeRoles } from "../../../middleware/authUserMiddleware.ts";
+import { authAdminMiddleware } from "../../../middleware/authorization/authAdminMiddleware.ts";
+import { authorizeRoles } from "../../../middleware/authorization/authUserMiddleware.ts";
 
 const AdminUsersService = express.Router();
 

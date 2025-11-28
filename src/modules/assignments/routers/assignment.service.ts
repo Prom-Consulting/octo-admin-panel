@@ -1,5 +1,5 @@
 import express from "express";
-import { authenticateToken, authorizeRoles } from "../../../middleware/authUserMiddleware.ts";
+import { authenticateToken, authorizeRoles } from "../../../middleware/authorization/authUserMiddleware.ts";
 import {
   createAssignment,
   deleteAssignment,
@@ -7,7 +7,7 @@ import {
   getAssignmentById,
   getListAssignments, payAssignment, refundAssignment,
 } from "../controllers/assignment.controller.ts";
-import { checkBranchMiddleware, checkOrganizationMiddleware } from "../../../middleware/checkOrganizationMiddleware.ts";
+import { checkBranchMiddleware, checkOrganizationMiddleware } from "../../../middleware/authorization/checkOrganizationMiddleware.ts";
 
 const AssignmentsServiceRoute = express.Router();
 

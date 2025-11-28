@@ -5,7 +5,7 @@ import OrganizationStaff, {
 } from "../models/OrganizationStaff.ts";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import { JWT_REFRESH_SECRET, JWT_SECRET } from "../../../middleware/authUserMiddleware.ts";
+import { JWT_REFRESH_SECRET, JWT_SECRET } from "../../../middleware/authorization/authUserMiddleware.ts";
 import type { UserToken } from "../../../types";
 import { refreshCookieOptions } from "../../../../config/cookie.ts";
 

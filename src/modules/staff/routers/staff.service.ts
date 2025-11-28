@@ -1,7 +1,7 @@
 import { Router } from "express";
 import {
   authorizeRoles,
-} from "../../../middleware/authUserMiddleware";
+} from "../../../middleware/authorization/authUserMiddleware.ts";
 import {
   activateStaff, addBranchToStaff,
   createStaff,
@@ -12,7 +12,7 @@ import {
   updateMyProfile,
   updateStaff,
 } from "../controllers/staff.controller.ts";
-import { checkBranchMiddleware, checkOrganizationMiddleware } from "../../../middleware/checkOrganizationMiddleware.ts";
+import { checkBranchMiddleware, checkOrganizationMiddleware } from "../../../middleware/authorization/checkOrganizationMiddleware.ts";
 
 const OrganizationStaffRouter = Router();
 

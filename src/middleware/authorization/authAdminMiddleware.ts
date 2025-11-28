@@ -1,7 +1,7 @@
 import jwt from "jsonwebtoken";
 import type { Request, Response, NextFunction } from "express";
 import { JWT_SECRET } from "./authUserMiddleware.ts";
-import AdminModel from "../modules/admin/models/AdminModel.ts";
+import AdminModel from "../../modules/admin/models/AdminModel.ts";
 
 export const authAdminMiddleware = async (req: Request, res: Response, next: NextFunction) => {
   try {
