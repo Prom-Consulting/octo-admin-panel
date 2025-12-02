@@ -10,8 +10,6 @@ import AdminClientRouter from "./client.service.ts";
 
 const AdminServiceRoute = Router();
 
-AdminServiceRoute.use("/auth", AdminAuthService);
-
 AdminServiceRoute.post(
   "/signUp",
   async (req: Request, res: Response, next: NextFunction) => {
@@ -48,6 +46,8 @@ AdminServiceRoute.post(
       next(error);}
   }
 );
+
+AdminServiceRoute.use("/auth", AdminAuthService);
 
 AdminServiceRoute.use(authAdminMiddleware);
 AdminServiceRoute.use("/organizations", AdminOrganizations);
