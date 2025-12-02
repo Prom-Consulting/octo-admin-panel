@@ -12,7 +12,7 @@ import { checkTimeOverlap } from "../utils/checkTimeOverlap.ts";
 import type { ServiceInfo } from "../../../types";
 import axios from "axios";
 import { octoApi } from "../../../constants/urls.ts";
-import { getBranchAndOrganization } from "../../../utils /getBranchAndOrganization.ts";
+import { getBranchAndOrganization } from "../../../utils /auth/getBranchAndOrganization.ts";
 import { clientActivityEvents } from "../../../events/clients/clientActivityEvents.ts";
 import { findOrCreateClient } from "../utils/createOrFindClient.ts";
 import { generateBookingToken } from "../../booking/utils/generateToken.ts";

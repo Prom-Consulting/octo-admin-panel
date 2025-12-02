@@ -1,6 +1,6 @@
 import type { Request } from "express";
-import Branch from "../modules/organization/models/Branch.ts";
-import Organization from "../modules/organization/models/Organization.ts";
+import Branch from "../../modules/organization/models/Branch.ts";
+import Organization from "../../modules/organization/models/Organization.ts";
 
 interface GetBranchOrgOptions {
   branch?: boolean;

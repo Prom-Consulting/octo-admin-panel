@@ -1,10 +1,8 @@
 import type { NextFunction, Request, Response } from "express";
 import { parseFile } from "../../../utils /uploadFile/uploadFile.ts";
 import ImportJob from "../models/ImportJobs.ts";
-import { getBranchAndOrganization } from "../../../utils /getBranchAndOrganization.ts";
+import { getBranchAndOrganization } from "../../../utils /auth/getBranchAndOrganization.ts";
 import path from "path";
-import { connect, StringCodec } from "nats";
-import { envConfig } from "../../../../config/envConfig.ts";
 
 export const createImportAssignments = async (req: Request, res: Response, next: NextFunction) => {
   try {

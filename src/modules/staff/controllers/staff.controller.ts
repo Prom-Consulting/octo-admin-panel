@@ -6,7 +6,7 @@ import { Op } from "sequelize";
 import { validateBranches } from "../../../methods/methods.ts";
 import bcrypt from "bcrypt";
 import Branch from "../../organization/models/Branch.ts";
-import { getBranchAndOrganization } from "../../../utils /getBranchAndOrganization.ts";
+import { getBranchAndOrganization } from "../../../utils /auth/getBranchAndOrganization.ts";
 
 const SALT_ROUNDS = 10;
 

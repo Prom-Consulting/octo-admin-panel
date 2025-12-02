@@ -2,7 +2,7 @@ import type { NextFunction, Request, Response } from "express";
 import { Op, type WhereOptions } from "sequelize";
 import Branch from "../models/Branch.ts";
 import Organization from "../models/Organization.ts";
-import { getBranchAndOrganization } from "../../../utils /getBranchAndOrganization.ts";
+import { getBranchAndOrganization } from "../../../utils /auth/getBranchAndOrganization.ts";
 
 export const getBranches = async (req: Request, res: Response, next: NextFunction) => {
   try {
