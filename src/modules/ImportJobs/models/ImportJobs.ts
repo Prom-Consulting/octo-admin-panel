@@ -21,7 +21,7 @@ export interface ImportJobAttributes {
   branch_id: number;
   organization_id: number;
   file_name: string;
-  file_id: string;
+  stored_file_name: string;
   status: ImportStatus;
   completed_at?: Date | null;
   error_message?: string | null;
@@ -56,7 +56,7 @@ export class ImportJob
   declare branch_id: number;
   declare organization_id: number;
   declare file_name: string;
-  declare file_id: string;
+  declare stored_file_name: string;
   declare status: ImportStatus;
   declare completed_at: Date | null;
   declare error_message: string | null;
@@ -71,12 +71,12 @@ export class ImportJob
 
 ImportJob.init(
   {
-    id: { type: DataTypes.STRING(36), primaryKey: true, },
+    id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
     user_id: { type: DataTypes.INTEGER, allowNull: false, },
     branch_id: { type: DataTypes.INTEGER, allowNull: false, },
     organization_id: { type: DataTypes.INTEGER, allowNull: false, },
     file_name: { type: DataTypes.TEXT, allowNull: false, },
-    file_id: { type: DataTypes.TEXT, allowNull: false, },
+    stored_file_name: { type: DataTypes.TEXT, allowNull: false, },
     status: {
       type: DataTypes.ENUM(...IMPORT_STATUSES),
       defaultValue: "PENDING",
@@ -116,12 +116,6 @@ ImportJob.init(
     sequelize,
     tableName: "import_jobs",
     timestamps: false,
-    indexes: [
-      { fields: ["user_id"] },
-      { fields: ["branch_id"] },
-      { fields: ["status"] },
-      { fields: ["createdAt"] },
-    ],
   }
 );
 

@@ -17,9 +17,9 @@ export interface OrganizationStaffAttributes {
 
   username?: string | null;
   first_name: string;
-  last_name: string;
-  password: string;
-  email: string;
+  last_name: string | null;
+  password: string | null;
+  email: string | null;
   token?: string | null;
 
   role: "manager" | "employee";
@@ -55,10 +55,10 @@ export class OrganizationStaff
   declare organization: OrganizationInfo;
   declare branches: BranchInfo[];
   declare first_name: string;
-  declare last_name: string;
+  declare last_name: string | null;
   declare username: string | null;
-  declare password: string;
-  declare email: string;
+  declare password: string | null;
+  declare email: string | null;
   declare token: string | null;
   declare role: "manager" | "employee";
   declare customRole: string | null;
@@ -84,13 +84,13 @@ OrganizationStaff.init(
       defaultValue: [],
     },
     first_name: { type: DataTypes.TEXT, allowNull: false },
-    last_name: { type: DataTypes.TEXT, allowNull: false },
+    last_name: { type: DataTypes.TEXT, allowNull: true },
     username: { type: DataTypes.TEXT, allowNull: true },
-    password: { type: DataTypes.TEXT, allowNull: false },
+    password: { type: DataTypes.TEXT, allowNull: true },
     token: { type: DataTypes.TEXT, allowNull: true },
     email: {
       type: DataTypes.TEXT,
-      allowNull: false,
+      allowNull: true,
       unique: true,
     },
     role: {

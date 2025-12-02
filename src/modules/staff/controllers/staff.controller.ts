@@ -207,7 +207,7 @@ export const createStaff = async (req: Request, res: Response, next: NextFunctio
       }
     }
 
-    const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
+    const hashedPassword = password ? await bcrypt.hash(password, SALT_ROUNDS) : null;
 
     const newStaff = await OrganizationStaff.create({
       organization: {
@@ -216,7 +216,7 @@ export const createStaff = async (req: Request, res: Response, next: NextFunctio
       },
       branches: branchValidation.validBranches!,
       first_name: firstname,
-      last_name: lastname,
+      last_name: lastname || null,
       username,
       password: hashedPassword,
       email,

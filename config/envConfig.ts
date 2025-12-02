@@ -8,4 +8,5 @@ export const envConfig = cleanEnv(process.env, {
   ONE_TIME_JWT_SECRET: str(),
   CLIENT_JWT_ACCESS_SECRET: str(),
   CLIENT_JWT_REFRESH_SECRET: str(),
+  NATS_SERVER: str(),
 });

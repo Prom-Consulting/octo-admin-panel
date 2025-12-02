@@ -16,7 +16,7 @@ import { setupClientActivityListeners } from "./events/clients/clientActivityLis
 import BookingRoute from "./modules/booking/routers";
 import ClientIndexRouter from "./modules/client/routers";
 import OrganizationIndexRouter from "./modules/organization/routers/organization";
-// import importJobsServiceRoute from "./modules/ImportJobs/routers";
+import importJobsServiceRoute from "./modules/ImportJobs/routers";
 
 config();
 
@@ -47,7 +47,7 @@ app.use("/assignments", AssignmentsServiceRoute);
 app.use("/staffAuthorization", OrganizationStaffAuthorizationRouter);
 app.use("/staff", StaffRouter);
 app.use("/working-dates", WorkingDatesServiceRoute);
-// app.use("/import-file", importJobsServiceRoute);
+app.use("/import-file", importJobsServiceRoute);
 
 //superadmin routes
 app.use("/admin", AdminServiceRoute);

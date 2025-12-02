@@ -7,7 +7,7 @@ export interface ParseFileOptions extends Options {}
 export const parseFile = (
   req: IncomingMessage,
   options: ParseFileOptions = {}
-): Promise<{ fields: Fields; files: Files; durationMs: number }> => {
+): Promise<{ fields: Fields; files: Files; durationMs: number, uploadDir: string | undefined }> => {
   const uploadDir = options.uploadDir || "./uploads";
 
   if (!fs.existsSync(uploadDir)) {
@@ -18,7 +18,7 @@ export const parseFile = (
   const form = formidable({
     uploadDir,
     keepExtensions: true,
-    maxFileSize: options.maxFileSize || 900 * 1024 * 1024,
+    maxFileSize: options.maxFileSize || 1000 * 1024 * 1024,
     ...options,
   });
 
@@ -28,7 +28,7 @@ export const parseFile = (
 
       const durationMs = Date.now() - start;
 
-      resolve({ fields, files, durationMs });
+      resolve({ fields, files, durationMs, uploadDir });
     });
   });
 };
