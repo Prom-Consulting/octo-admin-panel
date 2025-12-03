@@ -1,7 +1,7 @@
 import type { NextFunction, Response, Request } from "express";
-import { Client, verifyAccessToken } from "../modules/client/models/Client.ts";
+import { Client, verifyAccessToken } from "../../modules/client/models/Client.ts";
 import jwt from "jsonwebtoken";
-import type { ClientAuth } from "../types";
+import type { ClientAuth } from "../../types";
 
 export const authClientMiddleware = async (req: Request, res: Response, next: NextFunction) => {
   try {

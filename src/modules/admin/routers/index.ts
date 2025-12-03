@@ -1,7 +1,7 @@
 import { type NextFunction, type Request, type Response, Router } from "express";
 import AdminAuthService from "./auth.service.ts";
 import AdminOrganizations from "./organization.service.ts";
-import { authAdminMiddleware } from "../../../middleware/authAdminMiddleware.ts";
+import { authAdminMiddleware } from "../../../middleware/authorization/authAdminMiddleware.ts";
 import AdminModel from "../models/AdminModel.ts";
 import bcrypt from "bcrypt";
 import AdminBranchesService from "./branshes.service.ts";
@@ -9,8 +9,6 @@ import AdminUsersService from "./users.service.ts";
 import AdminClientRouter from "./client.service.ts";
 
 const AdminServiceRoute = Router();
-
-AdminServiceRoute.use("/auth", AdminAuthService);
 
 AdminServiceRoute.post(
   "/signUp",
@@ -48,6 +46,8 @@ AdminServiceRoute.post(
       next(error);}
   }
 );
+
+AdminServiceRoute.use("/auth", AdminAuthService);
 
 AdminServiceRoute.use(authAdminMiddleware);
 AdminServiceRoute.use("/organizations", AdminOrganizations);

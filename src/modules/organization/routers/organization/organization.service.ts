@@ -1,7 +1,7 @@
 import express from "express";
 import { getListOrganizations, getOrganizationByID } from "../../controllers/organization.controller.ts";
-import { authorizeRoles } from "../../../../middleware/authUserMiddleware.ts";
-import { checkOrganizationMiddleware } from "../../../../middleware/checkOrganizationMiddleware.ts";
+import { authorizeRoles } from "../../../../middleware/authorization/authUserMiddleware.ts";
+import { checkOrganizationMiddleware } from "../../../../middleware/authorization/checkOrganizationMiddleware.ts";
 
 const OrganizationServiceRoute = express.Router();
 OrganizationServiceRoute.use(authorizeRoles("owner"));

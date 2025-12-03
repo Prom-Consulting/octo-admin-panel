@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { changeUserData } from "../controller/user.controller.ts";
 import { userLogin, userLogout, userRefreshToken } from "../controller/auth.controller.ts";
-import { authenticateToken, authorizeRoles } from "../../../middleware/authUserMiddleware.ts";
+import { authenticateToken, authorizeRoles } from "../../../middleware/authorization/authUserMiddleware.ts";
 
 const UserServiceRoute = Router();
 

@@ -5,12 +5,12 @@ import {
   getWorkingDates,
   updateWorkingDates,
 } from "../controllers/workingDates.controller.ts";
-import { authenticateToken, authorizeRoles } from "../../../middleware/authUserMiddleware.ts";
-import { checkBranchMiddleware } from "../../../middleware/checkOrganizationMiddleware.ts";
+import { authenticateToken, authorizeRoles } from "../../../middleware/authorization/authUserMiddleware.ts";
+import { checkBranchMiddleware } from "../../../middleware/authorization/checkOrganizationMiddleware.ts";
 
 const WorkingDatesServiceRoute = express.Router();
 
-WorkingDatesServiceRoute.use(authenticateToken,);
+WorkingDatesServiceRoute.use(authenticateToken);
 
 WorkingDatesServiceRoute.get("/",
   checkBranchMiddleware,

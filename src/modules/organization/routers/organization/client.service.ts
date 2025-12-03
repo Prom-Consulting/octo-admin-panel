@@ -11,14 +11,14 @@ OrganizationClientRouter.patch("/:id", updateActiveClient);
  * @openapi
  * tags:
  *   - name: Clients list
- *     description: Управление клиентами (для владельца и менеджеров)
+ *     description: Управление клиентами (для владельца и сотрудников)
  */
 
 /**
  * @openapi
  * /organizations/clients:
  *   get:
- *     summary: Получить список всех клиентов (для владельца и менеджеров)
+ *     summary: Получить список всех клиентов
  *     description: >
  *       Эндпоинт возвращает список клиентов с фильтрацией, пагинацией и информацией об активности.
  *       Защищён админским токеном.
@@ -88,7 +88,7 @@ OrganizationClientRouter.patch("/:id", updateActiveClient);
  * @openapi
  * /organizations/clients/{id}:
  *   get:
- *     summary: Получить информацию о клиенте по ID (для владельца и менеджеров)
+ *     summary: Получить информацию о клиенте по ID
  *     description: >
  *       Возвращает базовую информацию о клиенте без номера телефона и без конфиденциальных полей.
  *     tags:
@@ -118,7 +118,7 @@ OrganizationClientRouter.patch("/:id", updateActiveClient);
  * @openapi
  * /organizations/clients/{id}:
  *   patch:
- *     summary: Активировать или деактивировать клиента (для владельца и менеджеров)
+ *     summary: Активировать или деактивировать клиента
  *     description: >
  *       Эндпоинт переключает статус активности клиента (`is_active`).
  *       Если клиент активен — он станет неактивным, и наоборот.

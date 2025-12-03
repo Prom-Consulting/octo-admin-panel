@@ -4,7 +4,7 @@ import type { WhereOptions } from "sequelize";
 import Organization, { type OrganizationAttributes } from "../../organization/models/Organization.ts";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import { JWT_REFRESH_SECRET, JWT_SECRET } from "../../../middleware/authUserMiddleware.ts";
+import { JWT_REFRESH_SECRET, JWT_SECRET } from "../../../middleware/authorization/authUserMiddleware.ts";
 import { refreshCookieOptions } from "../../../../config/cookie.ts";
 
 export const userLogin = async (req: Request, res: Response, next: NextFunction) => {

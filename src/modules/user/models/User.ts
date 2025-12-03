@@ -1,7 +1,7 @@
 import { DataTypes, Model, type Optional } from "sequelize";
 import { sequelize } from "../../../dbConfig/dbConfig.ts";
 import jwt from "jsonwebtoken";
-import { JWT_REFRESH_SECRET, JWT_SECRET } from "../../../middleware/authUserMiddleware.ts";
+import { JWT_REFRESH_SECRET, JWT_SECRET } from "../../../middleware/authorization/authUserMiddleware.ts";
 
 export interface UserAttributes {
   id: number;

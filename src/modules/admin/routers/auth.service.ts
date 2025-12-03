@@ -16,7 +16,7 @@ AuthorizationAdminService.delete("/logout", adminLogout);
 
 /**
  * @openapi
- * /admin/:
+ * /admin/auth:
  *   post:
  *     summary: Авторизация администратора
  *     description: >
@@ -92,7 +92,7 @@ AuthorizationAdminService.delete("/logout", adminLogout);
 
 /**
  * @openapi
- * /admin/refresh:
+ * /admin/auth/refresh:
  *   post:
  *     summary: Обновление access токена
  *     description: >
@@ -145,7 +145,7 @@ AuthorizationAdminService.delete("/logout", adminLogout);
 
 /**
  * @openapi
- * /admin/logout:
+ * /admin/auth/logout:
  *   delete:
  *     summary: Выход администратора из системы
  *     description: >

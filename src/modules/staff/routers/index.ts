@@ -1,6 +1,6 @@
 import { Router } from "express";
 import OrganizationStaffRouter from "./staff.service.ts";
-import { authenticateToken } from "../../../middleware/authUserMiddleware.ts";
+import { authenticateToken } from "../../../middleware/authorization/authUserMiddleware.ts";
 
 const StaffRouter = Router();
 

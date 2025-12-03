@@ -2,7 +2,7 @@ import type { NextFunction, Response, Request } from "express";
 import AdminModel, { generateAccessTokenForAdmin, generateRefreshTokenForAdmin } from "../models/AdminModel.ts";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import { JWT_REFRESH_SECRET, JWT_SECRET } from "../../../middleware/authUserMiddleware.ts";
+import { JWT_REFRESH_SECRET, JWT_SECRET } from "../../../middleware/authorization/authUserMiddleware.ts";
 import { refreshCookieOptions } from "../../../../config/cookie.ts";
 
 export const adminLogin = async (req: Request, res: Response, next: NextFunction) => {

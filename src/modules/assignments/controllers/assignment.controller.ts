@@ -1,8 +1,6 @@
 import type { NextFunction, Request, Response } from "express";
 import { Op, type WhereOptions } from "sequelize";
 import Assignment, {
-  ASSIGMENT_PAID,
-  ASSIGMENT_PAID_METHOD,
   ASSIGNMENT_STATUSES,
   type AssignmentAttributes,
 } from "../models/Assignment.ts";
@@ -12,13 +10,13 @@ import transformPrices from "../../../utils /transformPrices.ts";
 import { DateTime } from "luxon";
 import { checkTimeOverlap } from "../utils/checkTimeOverlap.ts";
 import type { ServiceInfo } from "../../../types";
-import User from "../../user/models/User.ts";
 import axios from "axios";
 import { octoApi } from "../../../constants/urls.ts";
 import { getBranchAndOrganization } from "../../../utils /getBranchAndOrganization.ts";
 import { clientActivityEvents } from "../../../events/clients/clientActivityEvents.ts";
 import { findOrCreateClient } from "../utils/createOrFindClient.ts";
 import { generateBookingToken } from "../../booking/utils/generateToken.ts";
+import WorkingDates from "../../staff/models/WorkingDates.ts";
 
 export const getListAssignments = async (
   req: Request,
@@ -130,6 +128,7 @@ export const createAssignment = async (
 
     const user = req.user;
     const token = req.headers.authorization?.split(" ")[1] || null;
+    const additionalServicesList = Array.isArray(additionalServices) ? additionalServices : [];
 
     let client;
     let finalToken = token;
@@ -207,22 +206,13 @@ export const createAssignment = async (
       return res.status(404).json({ error: "Employee not found" });
     }
 
-    const normalizePrice = (s: ServiceInfo) => ({
-      ...s,
-      price: transformPrices(s.price),
-    });
-
     const totalPrice =
       service.price +
-      additionalServices.reduce((sum: number, s: ServiceInfo) =>
-        sum + s.price, 0
-      );
+      additionalServicesList.reduce((sum, s) => sum + s.price, 0);
 
     const totalDuration =
       service.duration +
-      additionalServices.reduce((sum: number, s: ServiceInfo) =>
-        sum + s.duration, 0
-      );
+      additionalServicesList.reduce((sum, s) => sum + s.duration, 0);
 
     const discountValue = Math.max(0, Math.min(100, discount || 0));
     const finalPrice = Math.max(
@@ -267,6 +257,14 @@ export const createAssignment = async (
       });
     }
 
+    const checkWorkingDay = await WorkingDates.findOne({
+      where: { staff_id: targetEmployeeId, work_date: assignmentDateUTC }
+    });
+
+    if (!checkWorkingDay || checkWorkingDay.is_day_off) {
+      return res.status(400).json({ error: "The employee is not working on this day." });
+    }
+
     const newAssignment = await Assignment.create({
       organization_id: organizationId,
       branch_id: branchId,
@@ -292,8 +290,8 @@ export const createAssignment = async (
         duration: service.duration,
       },
       additional_services:
-        additionalServices.length > 0
-          ? additionalServices.map((s: ServiceInfo) => ({
+        additionalServicesList.length > 0
+          ? additionalServicesList.map((s: ServiceInfo) => ({
             id: s.id,
             name: s.name,
             price: s.price,
@@ -329,316 +327,6 @@ export const createAssignment = async (
   }
 };
 
-export const editAssignment = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  try {
-    const { id } = req.params;
-    const user = req.user!;
-    const assignment = await Assignment.findByPk(id);
-    const token = req.headers.authorization!.split(" ")[1];
-
-    if (!assignment) return res.status(404).json({ error: "Assignment not found" });
-
-    const updates: Partial<AssignmentAttributes> = {};
-    const {
-      service,
-      additionalServices,
-      startTime,
-      endTime,
-      assignmentDate,
-      employeeId,
-      notes,
-      status,
-      discount,
-      paid,
-      paymentMethod,
-      certificateNumber,
-    } = req.body;
-
-    if (status && !ASSIGNMENT_STATUSES.includes(status as any)) {
-      return res.status(400).json({ error: "Invalid status value" });
-    }
-    if (status) updates.status = status;
-    if (notes) updates.notes = notes;
-
-    if (employeeId) {
-      const employee = await OrganizationStaff.findByPk(employeeId);
-      if (!employee) return res.status(404).json({ error: "Employee not found" });
-      updates.employee_id = employeeId;
-      updates.employee_snapshot = {
-        first_name: employee.first_name,
-        last_name: employee.last_name || null,
-        role: employee.role,
-      };
-    }
-
-    let totalPrice = 0;
-    let totalDuration = 0;
-
-    if (service) {
-      const normalizedService = { ...service, price: transformPrices(service.price) };
-      updates.service_id = service.id;
-      updates.service_snapshot = {
-        name: service.name,
-        price: normalizedService.price,
-        duration: service.duration,
-      };
-      totalPrice += normalizedService.price;
-      totalDuration += service.duration;
-    } else {
-      totalPrice += assignment.final_price;
-      totalDuration += assignment.total_duration;
-    }
-
-    const currentDate = assignmentDate
-      ? DateTime.fromISO(assignmentDate, { zone: assignment.timezone })
-      : DateTime.fromJSDate(assignment.assignment_date, { zone: "utc" }).setZone(assignment.timezone).startOf("day");
-
-    const startDateTime = DateTime.fromISO(`${currentDate.toISODate()}T${startTime ?? assignment.start_time}`, {
-      zone: assignment.timezone,
-    });
-
-    let endDateTime = DateTime.fromISO(`${currentDate.toISODate()}T${endTime ?? assignment.end_time}`, {
-      zone: assignment.timezone,
-    });
-
-    if (!endTime) endDateTime = startDateTime.plus({ minutes: totalDuration });
-    if (endDateTime <= startDateTime) {
-      return res.status(400).json({ error: "End time cannot be earlier than start time" });
-    }
-
-    if (assignmentDate) updates.assignment_date = startDateTime.toUTC().toJSDate();
-    if (startTime) updates.start_time = startDateTime.toUTC().toFormat("HH:mm");
-    if (endTime) updates.end_time = endDateTime.toUTC().toFormat("HH:mm");
-
-    const normalizedAdditional = Array.isArray(additionalServices)
-      ? additionalServices.map((s) => ({ ...s, price: transformPrices(s.price) }))
-      : [];
-
-    if (normalizedAdditional.length > 0) {
-      updates.additional_services = normalizedAdditional;
-      for (const s of normalizedAdditional) {
-        totalPrice += s.price;
-        totalDuration += s.duration;
-      }
-    }
-
-    const discountValue = discount ?? assignment.discount ?? 0;
-    updates.discount = discountValue;
-    updates.final_price = Math.max(0, Math.round(totalPrice - (totalPrice * discountValue) / 100));
-    updates.total_duration = totalDuration;
-
-    const userDb = await User.findByPk(user.id);
-    if (!userDb) return res.status(404).json({ error: "User not found" });
-    updates.manager_id = userDb.id;
-    updates.manager_snapshot = {
-      first_name: userDb.first_name,
-      last_name: userDb.last_name || null,
-      role: userDb.role,
-    };
-
-    if (paid) {
-      if (!ASSIGMENT_PAID.includes(paid as any)) {
-        return res.status(400).json({ error: "Invalid paid value" });
-      }
-      updates.paid = paid;
-      if (paid !== "refund" && (!paymentMethod || !ASSIGMENT_PAID_METHOD.includes(paymentMethod[0]?.type))) {
-        return res.status(400).json({ error: "Payment method required when marking as paid" });
-      }
-    }
-
-    if (paid === "refund") {
-      try {
-        await axios.patch(
-          `http://localhost:3000/accounting/refund/${assignment.id}?branch_id=${assignment.branch_id}`,
-          {
-            status: "refund",
-            sourceType: "assignment"
-          },
-          {
-            headers: {
-              authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
-            },
-          }
-        );
-
-        return res.send({
-          message:
-            "Assignment updated successfully. Related accounting record marked as 'refund'.",
-          assignment,
-        });
-      } catch (e) {
-        return res.status(400).send({ error: e });
-      }
-    }
-
-    if (Object.keys(updates).length === 0) {
-      return res.status(400).json({ error: "No fields to update" });
-    }
-
-    if (paid === "paid") {
-      const client = assignment.client_snapshot;
-      const performedBy = assignment.employee_snapshot; // мастер (исполнитель)
-      const createdBySnap = updates.manager_snapshot;   // кто оформил (кассир/админ)
-
-      if (
-        !paymentMethod?.length ||
-        !assignment.total_duration ||
-        !updates.final_price
-      ) {
-        return res
-          .status(400)
-          .send({ error: "Missing required fields for accounting" });
-      }
-
-      let discountValue = discount ?? assignment.discount ?? 0;
-      // let giftCertificateSnapshot: CertificateInfo | null = null;
-      // let giftCertificateId: number | null = null;
-
-      let totalPaid = 0;
-
-      for (const method of paymentMethod) {
-        if (method.type === "gift_certificate") {
-          if (!certificateNumber) {
-            return res
-              .status(400)
-              .send({ error: "Gift certificate number is required" });
-          }
-        }
-
-        //
-        //   const { data: certificateData } = await axios.get(
-        //     `${octoApi}gift-certificates/${certificateNumber}`,
-        //     {
-        //       headers: {
-        //         authorization: `Bearer ${token}`,
-        //         "Content-Type": "application/json",
-        //       },
-        //     }
-        //   );
-        //
-        //   const certificate = certificateData;
-        //
-        //   const nowUtc = DateTime.now().toUTC();
-        //   const expiryUtc = DateTime.fromJSDate(certificate.expiry_date).toUTC();
-        //
-        //   if (nowUtc > expiryUtc) {
-        //     return res.status(400).send({ error: "Gift certificate has expired" });
-        //   }
-        //
-        //   discountValue = certificate.discount;
-        //
-        //   giftCertificateSnapshot = {
-        //     certificate_number: certificate.certificate_number,
-        //     amount: certificate.amount,
-        //     discount: certificate.discount,
-        //     expiry_date: certificate.expiry_date,
-        //   };
-        //   giftCertificateId = certificate.id;
-        //
-        //   method.amount = certificate.amount;
-        // } else {
-        //   method.amount = transformPrices(method.amount);
-        // }
-
-        if (method.amount) {
-          method.amount = method.type === "gift_certificate" ? method.amount : transformPrices(method.amount);
-          totalPaid += method.amount;
-        }
-        if (!method.name) method.name = null;
-      }
-
-      updates.payment_method = { methods: [...paymentMethod], total: totalPaid };
-
-      const finalPrice = Math.max(
-        0,
-        Math.round(totalPrice - (totalPrice * discountValue) / 100)
-      );
-
-      updates.discount = discountValue;
-      updates.final_price = finalPrice;
-      updates.total_duration = assignment.total_duration;
-
-      const newAccounting = {
-        branch_id: assignment.branch_id,
-        client_id: assignment.client_id,
-        client_snapshot: {
-          first_name: client.first_name,
-          last_name: client.last_name || null,
-          phone: client.phone_number,
-        },
-        performed_by_id: assignment.employee_id,
-        performed_by_snapshot: performedBy,
-        created_by_id: updates.manager_id,
-        created_by_snapshot: createdBySnap,
-        source_type: "assignment",
-        source_id: assignment.id,
-        source_snapshot: {
-          main_service: assignment.service_snapshot.name,
-          additional_services: assignment.additional_services?.map(service => service.name),
-          date: assignment.assignment_date,
-          total_duration: assignment.total_duration,
-        },
-        payment_method: updates.payment_method?.methods,
-        discount: discountValue,
-        date: DateTime.now().setZone(assignment.timezone).toUTC().toJSDate(),
-        timezone: assignment.timezone,
-        amount: finalPrice,
-        status: "success",
-        gift_certificate_number: certificateNumber,
-        // gift_certificate_snapshot: giftCertificateSnapshot,
-      };
-
-      await axios.post(
-        `${octoApi}accounting?branch_id=${assignment.branch_id}`,
-        newAccounting,
-        {
-          headers: {
-            authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      await assignment.update(updates);
-
-      return res.json({
-        message: `Assignment updated successfully. Created accounting`,
-        assignment,
-      });
-    }
-
-    await assignment.update(updates);
-
-    // const assignmentUpdatedEvent = {
-    //   assignmentId: assignment.id,
-    //   branchId: assignment.branch_id,
-    //   updates,
-    //   paid,
-    //   paymentMethod,
-    //   userId: user.id,
-    //   certificateNumber,
-    // };
-
-    return res.json({ message: "Assignment updated successfully", assignment });
-  } catch (e) {
-    if (axios.isAxiosError(e)) {
-      return res.status(e.response?.status || 500).json({
-        success: false,
-        message: e.response?.data?.message || e.message,
-        data: e.response?.data || null,
-        url: e.config?.url,
-        method: e.config?.method,
-      });
-    }
-    next(e);
-  }
-};
-
 export const editAssignmentBasic = async (
   req: Request,
   res: Response,
@@ -647,20 +335,31 @@ export const editAssignmentBasic = async (
   try {
     const { id } = req.params;
     const user = req.user!;
-    const assignment = await Assignment.findByPk(id);
-    const token = req.headers.authorization!.split(" ")[1]!;
     const client = req.client;
+    const token = req.headers.authorization?.split(" ")[1];
+
+    const assignment = await Assignment.findByPk(id);
 
     if (!assignment) {
       return res.status(404).json({ error: "Assignment not found" });
     }
 
+    if (assignment.paid === "paid") {
+      return res.status(403).json({
+        error: "Cannot edit an assignment that has been paid."
+      });
+    }
+
     if (user.role === "employee" && assignment.employee_id !== user.id) {
-      return res.status(403).json({ error: "Access denied. You can edit only your assignments." });
+      return res.status(403).json({
+        error: "Access denied. You can edit only your assignments."
+      });
     }
 
     if (client && client.id !== assignment.client_id) {
-      return res.status(400).json({ error: "You cannot view someone else's entry. You cannot change someone else's entry." });
+      return res.status(400).json({
+        error: "You cannot view someone else's entry. You cannot change someone else's entry."
+      });
     }
 
     const {
@@ -675,80 +374,247 @@ export const editAssignmentBasic = async (
       discount,
     } = req.body;
 
-    const updates: Partial<AssignmentAttributes> = {};
+    const updates: any = {};
 
-    if (status && !ASSIGNMENT_STATUSES.includes(status)) {
-      return res.status(400).json({ error: "Invalid status value" });
+    if (status !== undefined) {
+      if (!ASSIGNMENT_STATUSES.includes(status)) {
+        return res.status(400).json({ error: "Invalid status value" });
+      }
+      updates.status = status;
     }
-    if (status) updates.status = status;
-    if (notes) updates.notes = notes;
 
-    if (employeeId && user.role !== "employee") {
+    if (notes !== undefined) {
+      updates.notes = notes;
+    }
+
+    const isOnlyBasicUpdate =
+      (status !== undefined || notes !== undefined) &&
+      !service &&
+      !additionalServices &&
+      !startTime &&
+      !endTime &&
+      !assignmentDate &&
+      !employeeId &&
+      discount == null;
+
+    if (isOnlyBasicUpdate) {
+      await assignment.update(updates);
+
+      clientActivityEvents.emitAssignmentUpdated({
+        assignment,
+        token,
+      });
+
+      return res.json({
+        success: true,
+        message: "Assignment updated",
+        data: assignment
+      });
+    }
+
+    let targetEmployeeId = assignment.employee_id;
+
+    if (employeeId !== undefined) {
       const employee = await OrganizationStaff.findByPk(employeeId);
+
       if (!employee) {
         return res.status(404).json({ error: "Employee not found" });
       }
+
       updates.employee_id = employee.id;
       updates.employee_snapshot = {
         first_name: employee.first_name,
         last_name: employee.last_name || null,
         role: employee.role,
       };
+
+      targetEmployeeId = employee.id;
     }
+
 
     let totalPrice = 0;
     let totalDuration = 0;
 
-    if (service) {
-      const normalizedService = { ...service, price: transformPrices(service.price) };
+    if (service !== undefined) {
+      const normalized = {
+        ...service,
+        price: transformPrices(service.price),
+      };
+
       updates.service_id = service.id;
       updates.service_snapshot = {
-        name: service.name,
-        price: normalizedService.price,
-        duration: service.duration,
+        name: normalized.name,
+        price: normalized.price,
+        duration: normalized.duration,
       };
-      totalPrice += normalizedService.price;
-      totalDuration += service.duration;
+
+      totalPrice += normalized.price;
+      totalDuration += normalized.duration;
+    } else {
+      totalPrice += assignment.service_snapshot?.price || 0;
+      totalDuration += assignment.service_snapshot?.duration || 0;
     }
 
-    const normalizedAdditional = Array.isArray(additionalServices)
-      ? additionalServices.map((s) => ({ ...s, price: transformPrices(s.price) }))
-      : [];
+    if (additionalServices !== undefined) {
+      if (Array.isArray(additionalServices) && additionalServices.length > 0) {
+        const normalizedAdditional = additionalServices.map((s) => ({
+          id: s.id,
+          name: s.name,
+          price: transformPrices(s.price),
+          duration: s.duration,
+        }));
 
-    if (normalizedAdditional.length > 0) {
-      updates.additional_services = normalizedAdditional;
-      for (const s of normalizedAdditional) {
-        totalPrice += s.price;
-        totalDuration += s.duration;
+        updates.additional_services = normalizedAdditional;
+
+        for (const s of normalizedAdditional) {
+          totalPrice += s.price;
+          totalDuration += s.duration;
+        }
+      } else {
+        updates.additional_services = null;
+      }
+    } else {
+      const existingAdditional = assignment.additional_services;
+      if (Array.isArray(existingAdditional) && existingAdditional.length > 0) {
+        for (const s of existingAdditional) {
+          totalPrice += s.price || 0;
+          totalDuration += s.duration || 0;
+        }
       }
     }
 
-    const discountValue = discount ?? assignment.discount ?? 0;
+    const discountValue = discount !== undefined
+      ? Math.max(0, Math.min(100, discount))
+      : (assignment.discount ?? 0);
+
     updates.discount = discountValue;
-    updates.final_price = Math.max(0, Math.round(totalPrice - (totalPrice * discountValue) / 100));
+    updates.final_price = Math.max(
+      0,
+      Math.round(totalPrice - (totalPrice * discountValue) / 100)
+    );
     updates.total_duration = totalDuration;
 
-    const currentDate = assignmentDate
-      ? DateTime.fromISO(assignmentDate, { zone: assignment.timezone })
-      : DateTime.fromJSDate(assignment.assignment_date, { zone: assignment.timezone }).startOf("day");
 
-    const startDateTime = DateTime.fromISO(`${currentDate.toISODate()}T${startTime ?? assignment.start_time}`, {
-      zone: assignment.timezone,
-    });
+    const isTimeChange = startTime !== undefined || endTime !== undefined || assignmentDate !== undefined;
 
-    let endDateTime = DateTime.fromISO(`${currentDate.toISODate()}T${endTime ?? assignment.end_time}`, {
-      zone: assignment.timezone,
-    });
+    if (isTimeChange) {
+      const timezone = assignment.timezone || 'UTC';
 
-    if (!endTime) endDateTime = startDateTime.plus({ minutes: totalDuration });
+      const baseDate = assignmentDate !== undefined
+        ? DateTime.fromISO(assignmentDate, { zone: timezone })
+        : DateTime.fromJSDate(assignment.assignment_date, { zone: timezone }).startOf("day");
 
-    if (endDateTime <= startDateTime) {
-      return res.status(400).json({ error: "End time cannot be earlier than start time" });
+      if (!baseDate.isValid) {
+        return res.status(400).json({
+          error: "Invalid assignment date format",
+          details: baseDate.invalidReason
+        });
+      }
+
+      let startDateTime: DateTime;
+
+      if (startTime !== undefined) {
+        startDateTime = DateTime.fromISO(
+          `${baseDate.toISODate()}T${startTime}`,
+          { zone: timezone }
+        ).toUTC();
+      } else {
+        startDateTime = DateTime.fromISO(
+          `${baseDate.toISODate()}T${assignment.start_time}`,
+          { zone: "utc" }
+        );
+      }
+
+      if (!startDateTime.isValid) {
+        return res.status(400).json({
+          error: "Invalid start time format",
+          details: startDateTime.invalidReason
+        });
+      }
+
+      let endDateTime;
+      if (endTime !== undefined) {
+        endDateTime = DateTime.fromISO(
+          `${baseDate.toISODate()}T${endTime}`,
+          { zone: timezone }
+        );
+      } else {
+        endDateTime = startDateTime.plus({ minutes: totalDuration });
+      }
+
+      if (!endDateTime.isValid) {
+        return res.status(400).json({
+          error: "Invalid end time format",
+          details: endDateTime.invalidReason
+        });
+      }
+
+      if (endDateTime <= startDateTime) {
+        return res.status(400).json({
+          error: "End time cannot be earlier than start time",
+        });
+      }
+
+      const assignmentDateUTC = startDateTime.startOf("day").toUTC().toJSDate();
+      const startTimeUTC = startDateTime.toUTC().toFormat("HH:mm");
+      const endTimeUTC = endDateTime.toUTC().toFormat("HH:mm");
+
+      const overlap = await Assignment.findOne({
+        where: {
+          id: { [Op.ne]: assignment.id },
+          employee_id: targetEmployeeId,
+          branch_id: assignment.branch_id,
+          assignment_date: assignmentDateUTC,
+          status: { [Op.notIn]: ["canceled", "completed"] },
+          [Op.and]: [
+            {
+              start_time: {
+                [Op.lt]: endTimeUTC,
+              },
+            },
+            {
+              end_time: {
+                [Op.gt]: startTimeUTC,
+              },
+            },
+          ],
+        },
+      });
+
+      if (overlap) {
+        return res.status(409).json({
+          error: "Employee is already booked during this time",
+          details: {
+            conflictingAssignmentId: overlap.id,
+            start_time: overlap.start_time,
+            end_time: overlap.end_time,
+            date: overlap.assignment_date,
+          },
+        });
+      }
+
+      const workingDay = await WorkingDates.findOne({
+        where: {
+          staff_id: targetEmployeeId,
+          work_date: startDateTime
+            .setZone(timezone)
+            .startOf("day")
+            .toJSDate(),
+        },
+      });
+
+      console.log(assignmentDateUTC);
+
+      if (!workingDay || workingDay.is_day_off) {
+        return res.status(400).json({
+          error: "The employee is not working on this day.",
+        });
+      }
+
+      updates.assignment_date = assignmentDateUTC;
+      updates.start_time = startTimeUTC;
+      updates.end_time = endTimeUTC;
     }
-
-    if (assignmentDate) updates.assignment_date = startDateTime.toUTC().toJSDate();
-    if (startTime) updates.start_time = startDateTime.toUTC().toFormat("HH:mm");
-    if (endTime) updates.end_time = endDateTime.toUTC().toFormat("HH:mm");
 
     await assignment.update(updates);
 
@@ -757,9 +623,14 @@ export const editAssignmentBasic = async (
       token,
     });
 
-    return res.json({ message: "Assignment updated successfully", data: assignment });
-  } catch (e) {
-    next(e);
+    return res.json({
+      success: true,
+      message: "Assignment updated successfully",
+      data: assignment,
+    });
+
+  } catch (error) {
+    next(error);
   }
 };
 
