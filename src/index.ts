@@ -17,7 +17,8 @@ import BookingRoute from "./modules/booking/routers";
 import ClientIndexRouter from "./modules/client/routers";
 import OrganizationIndexRouter from "./modules/organization/routers/organization";
 import importJobsServiceRoute from "./modules/ImportJobs/routers";
-
+import Piscina from "piscina";
+import { resolve } from "path";
 config();
 
 const app = express();
@@ -56,6 +57,17 @@ app.use("/admin", AdminServiceRoute);
 app.use("/booking", BookingRoute);
 
 setupSwagger(app);
+
+console.log("piscina run");
+const piscina = new Piscina({
+  filename: resolve(__dirname, "./workerWrapper.js"),
+  workerData: {
+    fullpath: resolve(__dirname, "./index.worker.js") // или .ts если используете tsx
+  },
+});
+
+const result = await piscina.run({ a: 5, b: 10 });
+console.log('Result:', result);
 
 app.use((req, res) => {
   res.status(404).json({

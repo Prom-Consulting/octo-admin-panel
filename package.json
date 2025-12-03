@@ -31,6 +31,7 @@
     "nats": "^2.29.3",
     "pg": "^8.16.3",
     "pg-hstore": "^2.3.4",
+    "piscina": "^5.1.4",
     "sequelize": "^6.37.7",
     "sequelize-cli": "^6.6.3",
     "umzug": "^3.8.2",

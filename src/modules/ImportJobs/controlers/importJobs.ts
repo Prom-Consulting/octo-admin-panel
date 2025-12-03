@@ -48,30 +48,6 @@ export const createImportAssignments = async (req: Request, res: Response, next:
       status: "PENDING",
     });
 
-    const nc = await connect({ servers: envConfig.NATS_SERVER });
-    const sc = StringCodec();
-
-    await nc.publish(
-      "import.excel",
-      sc.encode(JSON.stringify({
-        importJobId: newImport.id,
-        filePath: path.basename(file.filepath),
-        relativePath: uploadDir + "/" +  path.basename(file.filepath),
-        // importType,
-        organization: {
-          id: organization.id,
-          name: organization.name,
-        },
-        branch: {
-          id: branch.id,
-          name: branch.name,
-          address: branch.address,
-        }
-      }))
-    );
-
-    await nc.close();
-
     res.status(200).send({
       file_name: file.originalFilename,
       stored: path.basename(file.filepath),
