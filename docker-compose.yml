@@ -1,10 +1,11 @@
-version: "3.8"
-
 services:
+  # ═══════════════════════════════════════════════════════════════════════════
+  # PostgreSQL Database
+  # ═══════════════════════════════════════════════════════════════════════════
   postgres:
     image: postgres:16
     container_name: postgres_db
-    restart: always
+    restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
@@ -13,13 +14,143 @@ services:
       - "5432:5432"
     volumes:
       - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app-network
 
+  # ═══════════════════════════════════════════════════════════════════════════
+  # Adminer - Database UI
+  # ═══════════════════════════════════════════════════════════════════════════
   adminer:
     image: adminer
     container_name: adminer_ui
-    restart: always
+    restart: unless-stopped
     ports:
       - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - app-network
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # Redis - Queue Backend
+  # ═══════════════════════════════════════════════════════════════════════════
+  redis:
+    image: redis:7-alpine
+    container_name: import-export-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    networks:
+      - app-network
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # Import Worker
+  # ═══════════════════════════════════════════════════════════════════════════
+  import-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: import-worker
+    restart: unless-stopped
+    command: node dist/workers/import-worker.js
+    environment:
+      - NODE_ENV=production
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/admin-database
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./tmp:/tmp
+      - ./logs:/app/logs
+    networks:
+      - app-network
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 1G
+        reservations:
+          cpus: '1'
+          memory: 512M
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # Export Worker
+  # ═══════════════════════════════════════════════════════════════════════════
+  export-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: export-worker
+    restart: unless-stopped
+    command: node dist/workers/export-worker.js
+    environment:
+      - NODE_ENV=production
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/admin-database
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./tmp:/tmp
+      - ./logs:/app/logs
+    networks:
+      - app-network
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 1G
+        reservations:
+          cpus: '1'
+          memory: 512M
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # Bull Board - Queue Monitoring
+  # ═══════════════════════════════════════════════════════════════════════════
+  bull-board:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: bull-board
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
 
 volumes:
   pg_data:
+    driver: local
+  redis_data:
+    driver: local

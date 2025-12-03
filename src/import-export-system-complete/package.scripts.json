@@ -1,0 +1,48 @@
+{
+  "scripts": {
+    "// Import/Export Workers": "================================",
+    
+    "workers:dev": "concurrently \"npm run worker:import:dev\" \"npm run worker:export:dev\"",
+    "worker:import:dev": "tsx watch src/workers/import-worker.ts",
+    "worker:export:dev": "tsx watch src/workers/export-worker.ts",
+    
+    "workers:build": "tsc && npm run workers:copy-files",
+    "workers:copy-files": "copyfiles -u 1 src/**/*.json dist/",
+    
+    "workers:start": "concurrently \"npm run worker:import:start\" \"npm run worker:export:start\"",
+    "worker:import:start": "node dist/workers/import-worker.js",
+    "worker:export:start": "node dist/workers/export-worker.js",
+    
+    "// PM2 Management": "================================",
+    
+    "workers:pm2:start": "pm2 start ecosystem.config.js",
+    "workers:pm2:stop": "pm2 stop ecosystem.config.js",
+    "workers:pm2:restart": "pm2 restart ecosystem.config.js",
+    "workers:pm2:delete": "pm2 delete ecosystem.config.js",
+    "workers:pm2:logs": "pm2 logs",
+    "workers:pm2:monit": "pm2 monit",
+    
+    "// Docker Management": "================================",
+    
+    "docker:workers:up": "docker-compose -f docker-compose.workers.yml up -d",
+    "docker:workers:down": "docker-compose -f docker-compose.workers.yml down",
+    "docker:workers:logs": "docker-compose -f docker-compose.workers.yml logs -f",
+    "docker:workers:restart": "docker-compose -f docker-compose.workers.yml restart",
+    
+    "// Redis Management": "================================",
+    
+    "redis:start": "docker run -d -p 6379:6379 --name import-export-redis redis:alpine",
+    "redis:stop": "docker stop import-export-redis && docker rm import-export-redis",
+    "redis:cli": "docker exec -it import-export-redis redis-cli"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "copyfiles": "^2.4.1",
+    "tsx": "^4.7.0"
+  },
+  "dependencies": {
+    "bullmq": "^5.1.0",
+    "ioredis": "^5.3.2",
+    "xlsx": "^0.18.5"
+  }
+}
