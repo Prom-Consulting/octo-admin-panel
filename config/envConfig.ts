@@ -9,5 +9,12 @@ export const envConfig = cleanEnv(process.env, {
   CLIENT_JWT_ACCESS_SECRET: str(),
   CLIENT_JWT_REFRESH_SECRET: str(),
   WHATSAPPSENDAPI: str(),
-  OCTOAPI: str()
+  OCTOAPI: str(),
+  NATS_SERVER: str(),
+
+  PG_HOST: str(),
+  PG_PORT: str(),
+  PG_USER: str(),
+  PG_PASSWORD: str(),
+  PG_DATABASE: str(),
 });

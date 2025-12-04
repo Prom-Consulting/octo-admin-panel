@@ -3,6 +3,8 @@ import { parseFile } from "../../../utils /uploadFile/uploadFile.ts";
 import ImportJob from "../models/ImportJobs.ts";
 import { getBranchAndOrganization } from "../../../utils /auth/getBranchAndOrganization.ts";
 import path from "path";
+import { connect, StringCodec } from "nats";
+import { envConfig } from "../../../../config/envConfig.ts";
 
 export const createImportAssignments = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -47,6 +49,30 @@ export const createImportAssignments = async (req: Request, res: Response, next:
       stored_file_name: path.basename(file.filepath),
       status: "PENDING",
     });
+
+    const nc = await connect({ servers: envConfig.NATS_SERVER });
+    const sc = StringCodec();
+
+    await nc.publish(
+      "import.excel",
+      sc.encode(JSON.stringify({
+        importJobId: newImport.id,
+        filePath: path.basename(file.filepath),
+        relativePath: uploadDir + "/" +  path.basename(file.filepath),
+        // importType,
+        organization: {
+          id: organization.id,
+          name: organization.name,
+        },
+        branch: {
+          id: branch.id,
+          name: branch.name,
+          address: branch.address,
+        }
+      }))
+    );
+
+    await nc.close();
 
     res.status(200).send({
       file_name: file.originalFilename,
