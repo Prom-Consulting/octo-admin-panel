@@ -16,6 +16,7 @@ import { setupClientActivityListeners } from "./events/clients/clientActivityLis
 import BookingRoute from "./modules/booking/routers";
 import ClientIndexRouter from "./modules/client/routers";
 import OrganizationIndexRouter from "./modules/organization/routers/organization";
+import { registerImportExportRoutes } from "./import-export-system-complete/import-export-routes.ts";
 // import importJobsServiceRoute from "./modules/ImportJobs/routers";
 
 config();
@@ -38,6 +39,8 @@ app.use(
 );
 app.use(express.json());
 void setupClientActivityListeners();
+
+registerImportExportRoutes(app)
 
 app.use("/user", UserServiceRoute);
 app.use("/branches", BranchServiceRoute);

@@ -58,8 +58,8 @@ const upload = multer({
  * Validate branch access (you should implement proper auth)
  */
 function validateBranchAccess(req: Request, res: Response, next: any) {
-  const { branchId } = req.params;
-  const { organizationId } = req.body;
+  const { branchId, organizationId } = req.query;
+
 
   // TODO: Implement proper authentication and authorization
   // Check if user has access to this branch and organization
@@ -88,7 +88,7 @@ export function registerImportExportRoutes(app: Express): void {
    * Upload and queue import file
    */
   app.post(
-    "/api/branches/:branchId/imports/upload",
+    "/api/branches/imports/upload",
     upload.single("file"),
     validateBranchAccess,
     async (req: Request, res: Response) => {
@@ -274,12 +274,12 @@ export function registerImportExportRoutes(app: Express): void {
    * Create export job
    */
   app.post(
-    "/api/branches/:branchId/exports/create",
+    "/api/branches/exports/create",
     validateBranchAccess,
     async (req: Request, res: Response) => {
       try {
-        const { branchId } = req.params;
-        const { organizationId, exportType, format, dateFrom, dateTo } = req.body;
+        const { branchId, organizationId } = req.query;
+        const { exportType, format, dateFrom, dateTo } = req.body;
 
         console.log(`📤 Export requested:`);
         console.log(`   Branch: ${branchId}`);
