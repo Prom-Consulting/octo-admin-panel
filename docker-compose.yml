@@ -2,7 +2,7 @@ version: "3.8"
 
 services:
   postgres:
-    image: postgres:16
+    image: postgres:17
     container_name: postgres_db
     restart: always
     environment:
@@ -20,6 +20,14 @@ services:
     restart: always
     ports:
       - "8080:8080"
+
+  nats:
+    image: nats:latest
+    container_name: nats_server
+    restart: always
+    ports:
+      - "5922:5922"  # Client connections
+    command: "-js -m 8222"  # Enable JetStream and monitoring
 
 volumes:
   pg_data:

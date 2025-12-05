@@ -17,4 +17,6 @@ export const envConfig = cleanEnv(process.env, {
   PG_USER: str(),
   PG_PASSWORD: str(),
   PG_DATABASE: str(),
+
+  PORT: str()
 });

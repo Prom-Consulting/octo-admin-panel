@@ -14,7 +14,7 @@ RUN bun install --frozen-lockfile
 COPY . .
 
 # Откроем порт
-EXPOSE 3000
+EXPOSE 5900
 
 # Запускаем приложение
 CMD ["bun", "run", "src/index.ts"]
