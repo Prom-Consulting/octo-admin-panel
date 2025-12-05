@@ -16,12 +16,13 @@ import { setupClientActivityListeners } from "./events/clients/clientActivityLis
 import BookingRoute from "./modules/booking/routers";
 import ClientIndexRouter from "./modules/client/routers";
 import OrganizationIndexRouter from "./modules/organization/routers/organization";
-// import importJobsServiceRoute from "./modules/ImportJobs/routers";
+import importJobsServiceRoute from "./modules/ImportJobs/routers";
+import { envConfig } from "../config/envConfig.ts";
 
 config();
 
 const app = express();
-const PORT = 8000;
+const PORT = envConfig.PORT;
 
 app.use(logger);
 app.use(cookieParser());
@@ -39,15 +40,15 @@ app.use(
 app.use(express.json());
 void setupClientActivityListeners();
 
-app.use("/user", UserServiceRoute);
-app.use("/branches", BranchServiceRoute);
-app.use("/clients", ClientIndexRouter);
-app.use("/organizations", OrganizationIndexRouter);
-app.use("/assignments", AssignmentsServiceRoute);
-app.use("/staffAuthorization", OrganizationStaffAuthorizationRouter);
-app.use("/staff", StaffRouter);
-app.use("/working-dates", WorkingDatesServiceRoute);
-// app.use("/import-file", importJobsServiceRoute);
+app.use("/api/main/user", UserServiceRoute);
+app.use("/api/main/branches", BranchServiceRoute);
+app.use("/api/main/clients", ClientIndexRouter);
+app.use("/api/main/organizations", OrganizationIndexRouter);
+app.use("/api/main/assignments", AssignmentsServiceRoute);
+app.use("/api/main/staffAuthorization", OrganizationStaffAuthorizationRouter);
+app.use("/api/main/staff", StaffRouter);
+app.use("/api/main/working-dates", WorkingDatesServiceRoute);
+app.use("/api/main/import-file", importJobsServiceRoute);
 
 //superadmin routes
 app.use("/admin", AdminServiceRoute);

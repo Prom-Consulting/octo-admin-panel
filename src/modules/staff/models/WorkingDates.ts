@@ -1,7 +1,5 @@
 import { DataTypes, Model, type Optional } from "sequelize";
 import { sequelize } from "../../../dbConfig/dbConfig.ts";
-import OrganizationStaff from "./OrganizationStaff.ts";
-import Branch from "../../organization/models/Branch.ts";
 
 export interface WorkingDatesAttributes {
   id: number;
@@ -59,25 +57,25 @@ WorkingDates.init(
   }
 );
 
-OrganizationStaff.hasMany(WorkingDates, {
-  foreignKey: "staff_id",
-  as: "working_dates",
-  onDelete: "CASCADE",
-});
-
-WorkingDates.belongsTo(OrganizationStaff, {
-  foreignKey: "staff_id",
-  as: "staff",
-});
-
-Branch.hasMany(WorkingDates, {
-  foreignKey: "branch_id",
-  as: "working_dates",
-});
-
-WorkingDates.belongsTo(Branch, {
-  foreignKey: "branch_id",
-  as: "branch",
-});
+// OrganizationStaff.hasMany(WorkingDates, {
+//   foreignKey: "staff_id",
+//   as: "working_dates",
+//   onDelete: "CASCADE",
+// });
+//
+// WorkingDates.belongsTo(OrganizationStaff, {
+//   foreignKey: "staff_id",
+//   as: "staff",
+// });
+//
+// Branch.hasMany(WorkingDates, {
+//   foreignKey: "branch_id",
+//   as: "working_dates",
+// });
+//
+// WorkingDates.belongsTo(Branch, {
+//   foreignKey: "branch_id",
+//   as: "branch",
+// });
 
 export default WorkingDates;

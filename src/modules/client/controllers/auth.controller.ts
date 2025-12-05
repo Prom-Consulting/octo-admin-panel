@@ -9,9 +9,9 @@ import type { NextFunction, Request, Response } from "express";
 import { refreshCookieOptions } from "../../../../config/cookie.ts";
 import { normalizePhone } from "../../../utils /phone/normalizePhone.ts";
 import axios from "axios";
-import { whatsappSendApi } from "../../../constants/urls.ts";
 import { generate6DigitCode } from "../../../utils /phone/sanitizePhone.ts";
 import jwt from "jsonwebtoken";
+import { envConfig } from "../../../../config/envConfig.ts";
 
 interface OTPEntry {
   phone: string;
@@ -79,7 +79,7 @@ export const startRegister = async (req: Request, res: Response) => {
 
   otpStore.push({ phone, code, expiresAt, status: false });
 
-  await axios.post(whatsappSendApi, {
+  await axios.post(envConfig.WHATSAPPSENDAPI, {
     accountId: "cmi4fnc3u000qo208kcq09zkx",
     message: `Ваш код подтверждения: ${code}`,
     to: phone,

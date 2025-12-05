@@ -1,6 +1,6 @@
 import { clientActivityEvents, ClientActivityEventType } from "./clientActivityEvents.ts";
 import axios from "axios";
-import { octoApi } from "../../constants/urls.ts";
+import { envConfig } from "../../../config/envConfig.ts";
 
 export const setupClientActivityListeners = () => {
   clientActivityEvents.onActivityEvent(
@@ -11,7 +11,7 @@ export const setupClientActivityListeners = () => {
        const url = organizationPerson ? "client-activity" : "booking/client/activity";
 
        await axios.post(
-         `${octoApi}${url}?branchId=${assignment.branch_id}`,
+         `${envConfig.OCTOAPI}${url}?branchId=${assignment.branch_id}`,
          {
            data: {
              id: assignment.id,
@@ -70,7 +70,7 @@ export const setupClientActivityListeners = () => {
         console.log("Activity UPDATED:", assignment.id);
 
         await axios.put(
-          `${octoApi}client-activity/${assignment.id}?branchId=${assignment.branch_id}`,
+          `${envConfig.OCTOAPI}client-activity/${assignment.id}?branchId=${assignment.branch_id}`,
           {
               id: assignment.id,
               branch_id: assignment.branch_id,

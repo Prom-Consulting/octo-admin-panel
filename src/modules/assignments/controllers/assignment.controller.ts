@@ -11,12 +11,12 @@ import { DateTime } from "luxon";
 import { checkTimeOverlap } from "../utils/checkTimeOverlap.ts";
 import type { ServiceInfo } from "../../../types";
 import axios from "axios";
-import { octoApi } from "../../../constants/urls.ts";
-import { getBranchAndOrganization } from "../../../utils /getBranchAndOrganization.ts";
+import { getBranchAndOrganization } from "../../../utils /auth/getBranchAndOrganization.ts";
 import { clientActivityEvents } from "../../../events/clients/clientActivityEvents.ts";
 import { findOrCreateClient } from "../utils/createOrFindClient.ts";
 import { generateBookingToken } from "../../booking/utils/generateToken.ts";
 import WorkingDates from "../../staff/models/WorkingDates.ts";
+import { envConfig } from "../../../../config/envConfig.ts";
 
 export const getListAssignments = async (
   req: Request,
@@ -674,7 +674,7 @@ export const payAssignment = async (
     if (status) updates.status = status;
 
     await axios.post(
-      `${octoApi}accounting?branch_id=${assignment.branch_id}`,
+      `${envConfig.OCTOAPI}accounting?branch_id=${assignment.branch_id}`,
       {
         branch_id: assignment.branch_id,
         client_id: assignment.client_id,
@@ -748,7 +748,7 @@ export const refundAssignment = async (
     }
 
     await axios.patch(
-      `${octoApi}accounting/refund/${assignment.id}?branchId=${assignment.branch_id}`,
+      `${envConfig.OCTOAPI}accounting/refund/${assignment.id}?branchId=${assignment.branch_id}`,
       {
         status: "refund",
         sourceType: "assignment",

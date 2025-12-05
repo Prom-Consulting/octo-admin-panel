@@ -1,8 +1,8 @@
 import type { WhereOptions } from "sequelize";
 import { Client, type ClientAttributes } from "../../client/models/Client";
-import { octoApi } from "../../../constants/urls.ts";
 import axios from "axios";
 import { generateBookingToken } from "../../booking/utils/generateToken.ts";
+import { envConfig } from "../../../../config/envConfig.ts";
 
 export const findOrCreateClient = async (
   clientData: any,
@@ -19,8 +19,8 @@ export const findOrCreateClient = async (
   const isOrgPerson = !!user;
 
   const url = isOrgPerson
-    ? `${octoApi}organization-client/search`
-    : `${octoApi}booking/client/search`;
+    ? `${envConfig.OCTOAPI}organization-client/search`
+    : `${envConfig.OCTOAPI}booking/client/search`;
 
   let finalToken = token;
   if (!finalToken) {

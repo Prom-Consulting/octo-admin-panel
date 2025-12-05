@@ -1,6 +1,6 @@
 import type { NextFunction, Response, Request } from "express";
 import { generateBookingToken } from "../utils/generateToken.ts";
-import { getBranchAndOrganization } from "../../../utils /getBranchAndOrganization.ts";
+import { getBranchAndOrganization } from "../../../utils /auth/getBranchAndOrganization.ts";
 
 // путь /booking/auth/:organizationId
 export const getGuestToken = async (req: Request, res: Response, next: NextFunction) => {
