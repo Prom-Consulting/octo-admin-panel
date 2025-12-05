@@ -1,12 +1,12 @@
 import { ZapisiKzParser } from "../formats/ZapisiKzParser.ts";
+import { DikidiParser } from "../formats/DikidiParser.ts";
 
 export const getParser = (importType: string) => {
   switch (importType) {
     case "zapisi_kz":
-      console.log(importType);
       return new ZapisiKzParser();
-    // case "another_format":
-    //   return new AnotherFormatParser();
+    case "dikidi":
+      return new DikidiParser();
     // case "xlsx":
     //   return new ExcelDefaultParser();
     default:

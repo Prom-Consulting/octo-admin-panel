@@ -50,6 +50,12 @@ export const startWorker = async () => {
         dataImport.branch,
       );
 
+      const result = await parser.parseFile(filePath,);
+
+      console.log("Parsed records:", result.records);
+      console.log("Errors:", result.parseErrors.length);
+      console.log("Metadata:", result.metadata);
+
       console.log(path.resolve(__dirname, "../../../uploads"));
 
       if (msg.respond) {

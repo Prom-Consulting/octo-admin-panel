@@ -3,13 +3,14 @@ import { ZapisiKzParser } from "../parsing/formats/ZapisiKzParser.ts";
 import type { BranchFields, OrganizationInfo } from "../../../../src/types";
 import type { ClientService } from "./ClientService.ts";
 import type { StaffService } from "./StaffService.ts";
+import { DikidiParser } from "../parsing/formats/DikidiParser.ts";
 
 export class ImportService {
     constructor(
         private assignmentService: AssignmentService,
         private clientService: ClientService,
         private employeeService: StaffService,
-        private parser: ZapisiKzParser
+        private parser: ZapisiKzParser | DikidiParser
     ) {}
 
   async processImport(filePath: string, organization: OrganizationInfo, branch: BranchFields) {
@@ -35,26 +36,26 @@ export class ImportService {
           chunk.map(async (record) => {
             try {
 
-              const employee = await this.employeeService.findOrCreate(
-                record.masterFirsName,
-                record.masterLastName,
-                organization,
-                branch
-              );
-
-              const client = await this.clientService.findOrCreate(
-                record.clientName,
-                record.phoneNumber
-              );
-
-              await this.assignmentService.createFromImport(
-                record,
-                branch,
-                organization,
-                client,
-                employee,
-                branch.timezone
-              );
+              // const employee = await this.employeeService.findOrCreate(
+              //   record.masterFirsName,
+              //   record.masterLastName,
+              //   organization,
+              //   branch
+              // );
+              //
+              // const client = await this.clientService.findOrCreate(
+              //   record.clientName,
+              //   record.phoneNumber
+              // );
+              //
+              // await this.assignmentService.createFromImport(
+              //   record,
+              //   branch,
+              //   organization,
+              //   client,
+              //   employee,
+              //   branch.timezone
+              // );
 
 
               stats.created++;

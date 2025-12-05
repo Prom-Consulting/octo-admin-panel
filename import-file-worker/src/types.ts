@@ -41,6 +41,31 @@ export interface ParsedZapisiKzResult {
     parseErrors: string[];
 }
 
+export interface ParsedResult<T> {
+  fileName: string;
+  totalRecords: number;
+  records: T[];
+  parseErrors: string[];
+  metadata: {
+    format: string;
+    sheetName?: string;
+    columns?: number;
+    [key: string]: any;
+  };
+}
+
+export interface ParserConfig {
+  skipEmptyRows: boolean;
+  validateRecords: boolean;
+  batchSize: number;
+}
+
+export interface ParseOptions {
+  sheetName?: string;
+  startRow?: number;
+  endRow?: number;
+}
+
 export const statusMap: Record<string, string> = {
     "Обслужен": "completed",
     "Новая": "new",
