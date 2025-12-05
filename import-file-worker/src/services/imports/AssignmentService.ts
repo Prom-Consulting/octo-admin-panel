@@ -1,39 +1,29 @@
-import type { ClientService } from "./ClientService";
-import { StaffService } from "./StaffService";
 import type { ZapisiKzRecord } from "../../types";
-import type { BranchInfo } from "../../../../src/modules/staff/models/OrganizationStaff";
+import {
+  type BranchInfo,
+  type OrganizationStaffAttributes,
+} from "../../../../src/modules/staff/models/OrganizationStaff";
 import type { ClientInfo, Employee, OrganizationInfo } from "../../../../src/types";
 import { normalizePhone, parseTime } from "../parsing/parsers/timeParser";
-import Assignment from "../../../../src/modules/assignments/models/Assignment.ts";
+import Assignment, {
+  type AssignmentStatus,
+} from "../../../../src/modules/assignments/models/Assignment.ts";
+import { Client } from "./ClientService.ts";
 
 export class AssignmentService {
-  constructor(
-    private clientService: ClientService,
-    private employeeService: StaffService
-  ) {}
 
   async createFromImport(
     record: ZapisiKzRecord,
     branch: BranchInfo,
     organization: OrganizationInfo,
+    client: Client,
+    employee: OrganizationStaffAttributes,
     timezone: string
   ) {
 
     const timeInfo = parseTime(record.time, timezone);
     if (!timeInfo) throw new Error(`Invalid time: ${record.time}`);
     const { assignmentDate, startUTC, endUTC } = timeInfo;
-
-    const employee = await this.employeeService.findOrCreate(
-      record.masterFirsName,
-      record.masterLastName,
-      organization,
-      branch
-    );
-
-    const client = await this.clientService.findOrCreate(
-      record.clientName,
-      record.phoneNumber
-    );
 
     const exists = await this.checkDuplicate({
       organizationId: organization.id,
@@ -120,7 +110,7 @@ export class AssignmentService {
     clientSnapshot: ClientInfo;
     employeeSnapshot: Employee;
     timeInfo: { assignmentDate: Date; startUTC: string; endUTC: string };
-    status: string;
+    status: AssignmentStatus;
     source: string;
     timezone?: string;
   }) {

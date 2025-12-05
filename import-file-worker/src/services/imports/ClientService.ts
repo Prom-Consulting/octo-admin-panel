@@ -36,11 +36,30 @@ export class ClientService {
   private clientModel: typeof Client;
 
   constructor(tenantDb: Sequelize) {
-    this.clientModel = getTenantModel(tenantDb, "organization_clients", initClientModel);
+    this.clientModel = getTenantModel(
+      tenantDb,
+      "organization_clients",
+      initClientModel
+    );
+  }
 
-    this.clientModel.sync()
-      .then(() => console.log("📦 organization_clients ready in tenant DB"))
-      .catch(err => console.log("❌ Sync error:", err));
+  async bulkInsert(clients: Array<{ name: string; phone: string }>) {
+    if (!clients.length) return;
+
+    const rows = clients.map(x => ({
+      id: generateClientId("import"),
+      source_type: "import",
+      first_name: x.name.trim(),
+      last_name: null,
+      phone_number: x.phone,
+      is_active: true,
+    }));
+
+    await this.clientModel.bulkCreate(rows, {
+      ignoreDuplicates: true,
+    });
+
+    console.log(`💾 Clients inserted: ${rows.length}`);
   }
 
   async findOrCreate(name: string, phone: string) {

@@ -9,8 +9,13 @@ import { envConfig } from "../../../../config/envConfig.ts";
 export const createImportAssignments = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const user = req.user!;
-    // const { importType } = req.body;
     const { fields, files, durationMs, uploadDir } = await parseFile(req);
+
+    const { importType, organizationId, branchId } = fields;
+    console.log(importType);
+    if (!importType) {
+      return res.status(400).send("Import type is required");
+    }
 
     const { branch, organization } = await getBranchAndOrganization(req, {
       required: true
@@ -34,7 +39,7 @@ export const createImportAssignments = async (req: Request, res: Response, next:
 
     if (
       file.mimetype !==
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" || !file
     ) {
       return res.status(400).json({
         error: "Incorrect file MIME type. Expected .xlsx"
@@ -59,7 +64,7 @@ export const createImportAssignments = async (req: Request, res: Response, next:
         importJobId: newImport.id,
         filePath: path.basename(file.filepath),
         relativePath: uploadDir + "/" +  path.basename(file.filepath),
-        // importType,
+        importType: importType[0],
         organization: {
           id: organization.id,
           name: organization.name,
@@ -68,6 +73,7 @@ export const createImportAssignments = async (req: Request, res: Response, next:
           id: branch.id,
           name: branch.name,
           address: branch.address,
+          timezone: branch.timezone,
         }
       }))
     );

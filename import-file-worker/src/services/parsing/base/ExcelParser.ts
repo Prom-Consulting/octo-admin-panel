@@ -13,9 +13,9 @@ export abstract class ExcelParser<T> extends BaseParser<T> {
         if (headers.includes('Время') && headers.includes('Мастер')) {
             return 'zapisi_kz';
         } else if (headers.includes('Дата') && headers.includes('Специалист')) {
-            return 'saluzi';
+            return 'altegio';
         } else if (headers.includes('appointment_date')) {
-            return 'yclients';
+            return 'dikidi';
         }
 
         return 'unknown';
@@ -23,6 +23,7 @@ export abstract class ExcelParser<T> extends BaseParser<T> {
 
     protected async parseExcelFile(
         filePath: string,
+        format: string,
         parseRowCallback: (row: ExcelJS.Row, rowIndex: number) => T | null
     ) {
         if (!fs.existsSync(filePath)) {
@@ -40,7 +41,6 @@ export abstract class ExcelParser<T> extends BaseParser<T> {
         const records: T[] = [];
         const parseErrors: string[] = [];
 
-        const format = this.detectFormat(workbook);
         console.log(`📊 Detected format: ${format}`);
 
         const startRow = this.getStartRowIndex(sheet);

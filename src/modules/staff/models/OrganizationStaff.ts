@@ -112,7 +112,7 @@ OrganizationStaff.init(
     photo_url: { type: DataTypes.STRING(255), allowNull: true },
   },
   {
-    tableName: "staff",
+    tableName: "organization_staff",
     sequelize,
     timestamps: true,
     indexes: [
@@ -126,19 +126,19 @@ OrganizationStaff.init(
   }
 );
 
-// для проверки ролей
-OrganizationStaff.addScope("managers", {
-  where: { role: "manager" },
-});
-
-OrganizationStaff.addScope("employees", {
-  where: { role: "employee" },
-});
-
-// дополнительный scope для поиска по конкретному филиалу
-OrganizationStaff.addScope("byBranch", (branchId: number) => ({
-  where: sequelize.literal(`branches @> '[{"id": ${branchId}}]'`),
-}));
+// // для проверки ролей
+// OrganizationStaff.addScope("managers", {
+//   where: { role: "manager" },
+// });
+//
+// OrganizationStaff.addScope("employees", {
+//   where: { role: "employee" },
+// });
+//
+// // дополнительный scope для поиска по конкретному филиалу
+// OrganizationStaff.addScope("byBranch", (branchId: number) => ({
+//   where: sequelize.literal(`branches @> '[{"id": ${branchId}}]'`),
+// }));
 
 export const generateAccessTokenForStaff = (
   staff: OrganizationStaffAttributes,

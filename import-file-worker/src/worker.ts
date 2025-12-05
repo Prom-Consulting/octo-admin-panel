@@ -5,8 +5,9 @@ import { StaffService } from "./services/imports/StaffService";
 import { getTenantDb, testTenantConnection } from "../db/tenantDb";
 import { AssignmentService } from "./services/imports/AssignmentService";
 import { connect, StringCodec } from "nats";
-import { ZapisiKzParser } from "./services/parsing/formats/ZapisiKzParser";
 import { envConfig } from "../../config/envConfig.ts";
+import type { ImportJobPayload } from "../../src/types";
+import { getParser } from "./services/parsing/parsers/getParser.ts";
 
 export const startWorker = async () => {
   console.log("🚀 Starting import worker...");
@@ -18,30 +19,35 @@ export const startWorker = async () => {
   console.log("👂 Listening for import jobs...");
 
   for await (const msg of sub) {
-    const job = JSON.parse(sc.decode(msg.data));
-    console.log("📥 Received job:", job.importJobId);
-
+    const dataImport: ImportJobPayload = JSON.parse(sc.decode(msg.data));
+    console.log("📥 Received job:", dataImport.importJobId);
 
     try {
-      const tenantDb = getTenantDb(job.organization.name);
+      const tenantDb = getTenantDb(dataImport.organization.name);
       await testTenantConnection(tenantDb);
 
       const clientService = new ClientService(tenantDb);
       const staffService = new StaffService();
-      const assignmentService = new AssignmentService(
+      const assignmentService = new AssignmentService();
+
+      console.log(dataImport.importType);
+
+      const parser = getParser(dataImport.importType);
+
+      const importService = new ImportService(
+        assignmentService,
         clientService,
-        staffService
+        staffService,
+        parser
       );
 
-      const parser = new ZapisiKzParser();
-      const importService = new ImportService(assignmentService, parser);
       const uploadsDir = path.resolve(__dirname, "../../uploads");
-      const filePath = path.resolve(uploadsDir, job.filePath);
+      const filePath = path.resolve(uploadsDir, dataImport.filePath);
 
       const stats = await importService.processImport(
         filePath,
-        job.organization,
-        job.branch,
+        dataImport.organization,
+        dataImport.branch,
       );
 
       console.log(path.resolve(__dirname, "../../../uploads"));
@@ -50,7 +56,7 @@ export const startWorker = async () => {
         msg.respond(sc.encode(JSON.stringify({
           success: true,
           stats,
-          importJobId: job.importJobId
+          importJobId: dataImport.importJobId
         })));
       }
 
@@ -61,7 +67,7 @@ export const startWorker = async () => {
         msg.respond(sc.encode(JSON.stringify({
           success: false,
           error: error instanceof Error ? error.message : "Unknown error",
-          importJobId: job.importJobId
+          importJobId: dataImport.importJobId
         })));
       }
     }

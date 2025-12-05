@@ -110,3 +110,22 @@ export interface ClientActivity {
   createdAt?: Date;
   updatedAt?: Date;
 }
+
+export interface BranchFields {
+  id: number;
+  name: string;
+  address: string;
+  timezone: string;
+}
+
+export const FILE_TYPE = ["zapisi_kz", "altegio", "dikidi"] as const;
+export type fileType = (typeof FILE_TYPE)[number];
+
+export interface ImportJobPayload {
+  importJobId: number;
+  filePath: string;
+  relativePath: string;
+  importType: fileType;
+  organization: OrganizationInfo;
+  branch: BranchFields
+}
